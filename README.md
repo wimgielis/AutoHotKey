@@ -7,3 +7,5 @@ A set of tools can be started by pressing the F10 function key. A menu will appe
 Most tools are to be used in Notepad++ or Turbo Integrator.
 
 The corresponding AHK file contains the source code. Please keep my header in it.
+
+I also put out my custom TM1 language menu in Notepad++. The code in the exe file will be toggle it on automatically.
