@@ -10,3 +10,8 @@ The corresponding AHK file contains the source code. Please keep my header in it
 
 I also put out my custom "user defined languages" in Notepad++. I add TM1 and AHK language syntax support.
 The code in the exe file will be toggle it on automatically with some of the tools.
+
+As Notepad++ is used and automated, we need to know its location. I have it in the AHK file as:
+vValue_Setting_NPPlusPlus_Location := "C:\Program Files\Notepad++\notepad++.exe"
+
+You can change it but then you also need to recompile the exe file, or you could use the AHK file (if AHK is installed on your system).
