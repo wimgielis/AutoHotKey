@@ -229,7 +229,7 @@ LoadMenu:
 	ToolsArray.Insert([toolName])
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
 
-	toolName:= "A new TM1 model"
+	toolName:= "Update PRO line numbers"
 
 	ToolsArray.Insert([toolName])
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
@@ -266,7 +266,7 @@ LoadMenu:
 	toolName:=
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
 
-	toolName:= "Update PRO line numbers"
+	toolName:= "A new TM1 model (in File Explorer)"
 
 	ToolsArray.Insert([toolName])
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
@@ -839,7 +839,7 @@ menuHandler:
 		gosub Read_in_AO_vars
         return
     }
-    else if(menuItem = "A new TM1 model")
+    else if(menuItem = "A new TM1 model (in File Explorer)")
     {
 		; ####################################################
 		; # Purpose of the script:
