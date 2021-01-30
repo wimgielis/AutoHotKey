@@ -1,12 +1,12 @@
 ﻿; ####################################################
-; #	
+; #
 ; # Author: Wim Gielis
 ; # Contact: wim.gielis@gmail.com
 ; # URL: https://github.com/wimgielis?tab=repositories
 ; # Website: https://www.wimgielis.com
 ; # Date: January 30, 2021
 ; # Based on the TI helper AutoHotKey script: https://code.cubewise.com/ti-helper
-; #	
+; #
 ; ####################################################
 
 ; 1. in Turbo Integrator editor, Rules editor, Notepad++
@@ -271,6 +271,11 @@ LoadMenu:
 	ToolsArray.Insert([toolName])
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
 
+	toolName:= "Open the PRO file"
+
+	ToolsArray.Insert([toolName])
+	Menu,ToolsSubmenu,add,%toolName%,menuHandler
+
 	menuName:="Tools"
 	menuHandler:="ToolsSubmenu"
 
@@ -373,7 +378,7 @@ menuHandler:
 		; # - allow to generate the TI code for selected variables
 		; # - it will be pasted at the cursor
 		; # - several options are built-in
-		; # 
+		; #
 		; # To be added later:
 		; # - Order of the selected variables could be respected and AsciiOutput in that order
 		; # - A tab control on the gui containing a 'live' preview of what the code would create (with manual adjustment)
@@ -381,26 +386,26 @@ menuHandler:
 		; # - No REST API used and needed for now, I parse a text file and that's it
 		; # - Notepad++ is needed
 		; ####################################################
-        
+
 
 		vProcess := Get_Process_Name( "", "___Current process" )
 
 		Gui, Destroy
 
 		Gui, Add, Text, vFullFilename Disabled, %vProcess%
-		
+
 		Gui, Add, Button, gAO_SelectALL x15, Select all
 		Gui, Add, Button, gAO_ReloadVars x+30, Reload variables
 		Gui, Add, ListView, x10 w400 h500, Variable Type|Variable Name|Data Type
 		Gui, Add, ListBox, 8 x+10 w150 r9 Choose1 vShow_Which_Variables gShow_Which_Variables, All|Parameters|Data source variables|Data source new variables|Custom variables|   in the Prolog tab|   in the Metadata tab|   in the Data tab|   in the Epilog tab
 		Gui, Add, ListBox, AltSubmit ReadOnly y+30 w150 r3 vSwitch_Text_Number gSwitch_Text_Number, Text <--> Number|--> Text|--> Number
 		Gui, Add, Button, gAO_OK y+40, Generate output
-		
+
 		Gui, Add, ListBox, x10 w100 Choose1 vMyListBox_OutputFunction, AsciiOutput|TextOutput
 		Gui, Add, ListBox, AltSubmit x+20 w100 Choose1 vMyListBox_OutputFolder, DataDir|LoggingDir
 		Gui, Add, edit, vEdi1 x+20 w160 r1, test.txt
 		Gui, Add, CheckBox, y+10 vVariable_Filename, Variable
-		
+
         Gui, Add, CheckBox, x10 y+15 vAdd_Output_Settings, Add output settings
         Gui, Add, CheckBox, x10 vNumbers_NumberFormat, Numbers get a numberformat
 
@@ -424,7 +429,7 @@ menuHandler:
 		Gui, Show, w600 h850, Output variables to a text file                                                         (c) 2021 - Wim Gielis
 
         return
-		
+
 		Show_Which_Variables:
 		gosub Read_in_AO_vars
 		return
@@ -501,7 +506,7 @@ menuHandler:
 					my_param_type := ParamArray%Index_type%
 					; remove the linebreak
 					StringTrimRight, my_param_type, my_param_type, 1
-				
+
 					If ( A_index < Nr_of_vars_without_builtin + 2 )
 					{
 						If ( my_param_type = 2 )
@@ -718,7 +723,7 @@ menuHandler:
 				sOutput .= "GetProcessErrorFileDirectory | "
 			sOutput .= "'" . Edi1 . "';" . e
 			}
-		
+
 		; output with settings
 		If ( Add_Output_Settings = True )
 		    {
@@ -727,7 +732,7 @@ menuHandler:
 			; sOutput .= "DatasourceAsciiDecimalSeparator = ',';" . e
 			; sOutput .= "DatasourceAsciiThousandSeparator = '.';" . e
 			}
-		
+
 		; output with numberformat
 		If ( Numbers_NumberFormat = True )
 		    {
@@ -735,7 +740,7 @@ menuHandler:
 			sOutput .= "vDec = ',';" . e
 			sOutput .= "v1000 = '.';" . e
 			}
-		
+
 		; output with header
 		If ( Header = True )
 			{
@@ -795,7 +800,7 @@ menuHandler:
 				LV_GetText(Var_Name, RowNumber, 2)
 				LV_GetText(Var_Type, RowNumber, 3)
 				StringLower, vVar_Name, Var_Name
-				
+
 				If ( Names_of_variables = False )
 				{
 					If ( Var_Type = "Number" )
@@ -839,7 +844,69 @@ menuHandler:
 		gosub Read_in_AO_vars
         return
     }
-    else if(menuItem = "A new TM1 model (in File Explorer)")
+    else if(menuItem = "Open the PRO file")
+    {
+	
+        cPath_TM1_model_Main := "D:\path to my data directory with trailing backslash"
+
+		; ####################################################
+		; # Purpose of the script:
+		; - open up any (valid) PRO file in Notepad++
+		; - this is done based on the following conditions:
+		; - * if the clipboard contains a valid PRO file name in the TM1 data directory, this one is taken
+		; - * if a TI process is opened up in the TI editor, this one is taken
+		; - * if a TM1 processerror log file is selected in Windows File Explorer, the process name is parsed out and this one is taken
+		; - * if still no luck, the selected text in Notepad++ is copied into the clipboard and then this one is taken
+		; -     (so please select the name of a TI process, for example inside an ExecuteProcess statement)
+		; ####################################################
+
+        WinGetTitle, TM1_Window_Title, A
+        WinGetClass, class, A
+
+        process := Clipboard
+        GoSub, ReadIn_TM1_models_Settings
+        vFile=%cPath_TM1_model_Main%%process%.pro
+        IfExist, %vFile%
+           { }
+        else if InStr( TM1_Window_Title, "Turbo Integrator:", false ) = 1
+           {
+           FullCaption = %TM1_Window_Title%
+           StringReplace, FullCaption, FullCaption, ->, ``, All
+           StringSplit, arrprocess, FullCaption, ``
+           process := trim(arrprocess2)
+           }
+        else if (class="CabinetWClass")||(class="ExploreWClass")||(class="Progman") ; File Explorer
+           {
+           vFullFile = % Explorer_GetSelection()
+           SplitPath, vFullFile, , dir, extension, name_no_ext
+           If extension = log
+           {
+           process := SubStr(name_no_ext, 41)
+           }
+           ; msgbox, % Explorer_GetSelection()
+           }
+        else
+           {
+           clipboard = ; clear the clipboard
+           Send ^c
+           ClipWait  ; Wait for the clipboard to contain text
+           process := trim(clipboard)
+           }
+
+        vFile=%cPath_TM1_model_Main%%process%.pro
+        IfExist, %vFile%
+           {
+           Run, "%vFile%"
+           WinWait ahk_class Notepad++
+           WinWaitActive ahk_class Notepad++
+           WinMaximize
+           }
+        else
+           msgbox %vFile% does not exist
+        }
+        return
+
+	else if(menuItem = "A new TM1 model (in File Explorer)")
     {
 		; ####################################################
 		; # Purpose of the script:
@@ -988,7 +1055,7 @@ else
    }
 
 
-GuiControl,,Edi4, %cPath_TM1s_exe%   
+GuiControl,,Edi4, %cPath_TM1s_exe%
 GuiControl,,Edi8,
 GuiControl, Disable, Edi8
 GuiControl, Disable, Chbx8
@@ -1092,12 +1159,12 @@ But:
     msgbox Make sure the data directory is %Edi1%\Data or please change it
     GuiControl,,Edi2, %Edi1%\Data
     GuiControl,,Edi3, %Edi1%\Logs
-	
+
 	splits := StrSplit(Edi1, "\")
 	t := % splits[splits.MaxIndex()]
 	; StringUpper, t, t
 	; StringReplace, t, t, A_Space,   (deze code is fout)
-	
+
     GuiControl,,Edi5, %t%
     GuiControl,,Edi6, %Edi1%
     GuiControl,,Edi7, %t%
@@ -1563,7 +1630,7 @@ tm1_as_appGuiEscape:
   ; ExitApp
 return
 }
-	
+
 	else if(menuItem = "Convert to Expand")
     {
         Send {Esc 2}
