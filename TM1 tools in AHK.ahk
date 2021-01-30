@@ -4,7 +4,7 @@
 ; # Contact: wim.gielis@gmail.com
 ; # URL: https://github.com/wimgielis?tab=repositories
 ; # Website: https://www.wimgielis.com
-; # Date: January 28, 2021
+; # Date: January 30, 2021
 ; # Based on the TI helper AutoHotKey script: https://code.cubewise.com/ti-helper
 ; #	
 ; ####################################################
@@ -124,6 +124,21 @@ return
 ;~~~~~~~~~~~~~~~~~~~
 ; HOTKEYS (Note: there are more hotkeys above)
 ;~~~~~~~~~~~~~~~~~~~
+#IfWinActive ahk_class ExploreWClass
+^F10:: ; <-- (Notepad++) reload
+    Reload
+F10:: ;{ <--  ~ (Notepad++) Main menu ~
+    Menu,menu,show
+Return
+
+#IfWinActive ahk_class CabinetWClass
+^F10:: ; <-- (Notepad++) reload
+    Reload
+F10:: ;{ <--  ~ (Notepad++) Main menu ~
+    Menu,menu,show
+Return
+
+
 #IfWinActive, ahk_class Notepad++
 ^F10:: ; <-- (Notepad++) reload
     Reload
@@ -210,6 +225,11 @@ LoadMenu:
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
 
 	toolName:= "Generate AsciiOutput"
+
+	ToolsArray.Insert([toolName])
+	Menu,ToolsSubmenu,add,%toolName%,menuHandler
+
+	toolName:= "A new TM1 model"
 
 	ToolsArray.Insert([toolName])
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
@@ -819,7 +839,732 @@ menuHandler:
 		gosub Read_in_AO_vars
         return
     }
-    else if(menuItem = "Convert to Expand")
+    else if(menuItem = "A new TM1 model")
+    {
+		; ####################################################
+		; # Purpose of the script:
+		; - Create a shortcut or service to run a TM1 model
+		; - output is a shortcut or a service to run a TM1 model
+		; - with a userform to guide the user
+		; - when asked to browse to a folder, browse to the folder containing the tm1s.cfg file
+		; - the tm1s.cfg file can be created/updated
+		; - the config file for TM1 is not necessarily part of the TM1 data directory
+		; - there is only 1 folder for the TM1 data directory
+		; - the TM1 logging directory is part of the TM1 data directory, and is called "Logs", unless you choose the logging directory yourself
+		; - TM1 server name can be set too. Do this before launching this tool. A number of other settings are set in this script, though, for your convenience
+		; - you can also delete all commentary lines (lines starting with #). For instance, IBM's cfg file is quite big and not needed for simple models
+		; ####################################################
+
+; get settings, for example from an ini configuration file (now it's hardcoded here)
+cPath_TM1s_exe := "C:\ibm\cognos\tm1_64\bin64\tm1s.exe"
+cPath_TM1s_exe := ReplaceEnvVars(cPath_TM1s_exe)
+IfNotExist, %cPath_TM1s_exe%
+   cPath_TM1s_exe := "C:\ibm\cognos\tm1_64\bin64\tm1s.exe"
+
+SplitPath, cPath_TM1s_exe, , dir
+cPath_TM1sd_exe := % dir . "\tm1sd.exe"
+
+currentpath :=
+{
+    v =
+    v := GetSelectedFileFolderNames_UnderCursor()
+	if v
+	   currentpath = %v%
+	else
+	{
+        v := GetSelectedFileFolderNames_FolderYouSee()
+	    if v
+	       currentpath = %v%
+	    else
+	       return
+	}
+}
+currentpath := StrSplit(currentpath, "`n" )[1]
+
+if InStr( FileExist(currentpath), "D") == 0
+    {
+	; take the folder
+    SplitPath, currentpath, , currentpath
+    }
+
+gui, destroy
+gui, tm1_as_app:new
+
+gui, add, Button, vBut1 gBut x10 y+20 w150, Select folder of TM1s.cfg
+gui, add, edit, vEdi1 x+20 w500 r1 gChanged_Editbox
+gui, add, CheckBox, vChbx1 x+20
+
+gui, add, Button, vBut2 gBut x10 w150, Select data dir
+gui, add, edit, vEdi2 x+20 w500 r1 gChanged_Editbox
+gui, add, CheckBox, vChbx2 x+20
+
+gui, add, Button, vBut3 gBut x10 w150, Select logging dir
+gui, add, edit, vEdi3 x+20 w500 r1 gChanged_Editbox
+gui, add, CheckBox, vChbx3 x+20
+
+gui, add, Button, vBut4 gBut x10 w150, TM1 server exe
+gui, add, edit, vEdi4 x+20 w500 r1 gChanged_Editbox
+gui, add, CheckBox, vChbx4 x+20
+
+gui, add, Button, vBut6 gBut x10 w150, Select folder of shortcut
+gui, add, edit, vEdi6 x+20 w500 r1 gChanged_Editbox
+gui, add, CheckBox, vChbx6 x+20
+
+gui, add, Text, x10 w150, Shortcut / service name
+gui, add, edit, vEdi5 x+20 w500 r1 gChanged_Editbox
+gui, add, CheckBox, vChbx5 x+20
+
+gui, add, Text, x10 w150, Specify the TM1 model name
+gui, add, edit, vEdi7 x+20 w500 r1 gChanged_Editbox
+gui, add, CheckBox, vChbx7 x+20
+
+gui, add, Text, x10 w150, Username for the service
+gui, add, edit, vEdi8 x+20 w500 r1 gChanged_Editbox
+gui, add, CheckBox, vChbx8 x+20
+
+gui, add, Text, x10 w150, Password for the username
+gui, add, edit, vEdi9 x+20 w500 r1 gChanged_Editbox Password
+gui, add, CheckBox, vChbx9 x+20
+
+Gui, add, ListBox, r3 x250 w200 choose1 gChanged_AppOrService vAppOrService, Create a shortcut|Create a service|Don't create shortcut nor service
+Gui, add, CheckBox, Checked0 vChbx_RunModel x10 y+20, Run the TM1 model ?
+Gui, add, CheckBox, Checked vChbx_Put_In_Default_Values, Put in default values ?
+Gui, add, CheckBox, Checked0 x10 vChbx_Create_Addit_Folders, Create additional folders ?
+Gui, add, CheckBox, Checked vChbx_Remove_Unnecessary_Lines, Remove unnecessary lines that are commented out ?
+Gui, add, CheckBox, Checked0 vChbx_Delete_Client_Settings, Delete clients settings in the respective cub files ?
+Gui, add, CheckBox, Checked0 vChbx_Delete_Feeders_Files, Delete feeders files ?
+Gui, add, CheckBox, Checked0 vChbx_Delete_Controller_Objects, Delete Controller objects ?
+Gui, add, CheckBox, Checked0 vChbx_Delete_Applications, Delete applications ?
+Gui, add, CheckBox, Checked0 vChbx_Delete_DollarExtensionFiles, Delete dollar extension files ?
+Gui, add, CheckBox, Checked0 vChbx_Delete_BackupFiles, Delete backup files ?
+Gui, add, ListBox, r2 choose1 vAdminHostChoice, Localhost|%A_computername%
+Gui, add, ListBox, r4 choose4 vChoresChoice, Delete chores|Deactivate chores|Activate chores|Leave untouched
+gui, add, Button, vBut9 gBut x+150 w100, Temporary
+gui, add, Button, vBut10 gBut x+150 w100, Folder nemen
+
+GuiControl,,Edi1, %currentpath%
+
+IfExist %currentpath%\TM1Data
+   GuiControl,,Edi2, %currentpath%\TM1Data
+else
+   {
+   IfExist %currentpath%\Data
+	  GuiControl,,Edi2, %currentpath%\Data
+   Else
+      {
+      p := % GetParentDir(currentpath, 1)
+      IfExist %p%\TM1Data
+         GuiControl,,Edi2, %p%\TM1Data
+      else
+         {
+         IfExist %p%\Data
+            GuiControl,,Edi2, %p%\Data
+         ; else
+            ; GuiControl,,Edi2, %currentpath%
+         }
+      }
+   }
+
+
+IfExist %currentpath%\TM1Logs
+   GuiControl,,Edi3, %currentpath%\TM1Logs
+else
+   {
+   IfExist %currentpath%\Logs
+	  GuiControl,,Edi3, %currentpath%\Logs
+   Else
+      {
+      p := % GetParentDir(currentpath, 1)
+      IfExist %p%\TM1Logs
+         GuiControl,,Edi3, %p%\TM1Logs
+      else
+         {
+         IfExist %p%\Logs
+            GuiControl,,Edi3, %p%\Logs
+         ; else
+            ; GuiControl,,Edi3, %currentpath%
+         }
+      }
+   }
+
+
+GuiControl,,Edi4, %cPath_TM1s_exe%   
+GuiControl,,Edi8,
+GuiControl, Disable, Edi8
+GuiControl, Disable, Chbx8
+GuiControl,,Edi9,
+
+GuiControl, Disable, Edi9
+GuiControl, Disable, Chbx9
+
+gui, add, Button, vBut7 gBut w100, Exit
+gui, add, Button, vBut8 gBut x+150 w200 Default, Create
+
+gui, show, , Run a TM1 model
+
+return
+
+But:
+  gui, Submit, NoHide
+  If (a_guicontrol = "But1") {
+	FileSelectFolder, fld, *%Edi1%, 3, Select the folder containing the tm1s.cfg file`n(if missing it can be generated)
+	If ErrorLevel
+       {
+       GuiControl,,Edi1,
+	   }
+    Else
+	   {
+	   fld := RegExReplace(fld, "\\$")
+       GuiControl,,Edi1, % fld
+	   }
+
+  }
+  If (a_guicontrol = "But2") {
+    If Edi2 <>
+       FileSelectFolder, fld, *%Edi2%
+    Else
+       FileSelectFolder, fld, *%Edi1%
+    If ErrorLevel
+       {
+       GuiControl,,Edi2,
+	   }
+    Else
+	   {
+	   fld := RegExReplace(fld, "\\$")
+       GuiControl,,Edi2, % fld
+	   }
+  }
+  If (a_guicontrol = "But3") {
+    If Edi3 <>
+       FileSelectFolder, fld, *%Edi3%
+    Else
+       FileSelectFolder, fld, *%Edi1%
+    If ErrorLevel
+       {
+       GuiControl,,Edi3,
+	   }
+    Else
+	   {
+	   fld := RegExReplace(fld, "\\$")
+       GuiControl,,Edi3, % fld
+	   }
+  }
+  If (a_guicontrol = "But4") {
+	FileSelectFile, fil, 3, %cPath_TM1s_exe%, Select the TM1s.exe file (*.exe)
+    If ErrorLevel
+       {
+       GuiControl,,Edi4,
+	   }
+    Else
+	   {
+       GuiControl,,Edi4, % fil
+	   }
+  }
+  If (a_guicontrol = "But6") {
+	FileSelectFolder, fld, *%Edi1%, 3, Select the folder that will contain the shortcut
+	If ErrorLevel
+       {
+       GuiControl,,Edi6,
+	   }
+    Else
+	   {
+	   fld := RegExReplace(fld, "\\$")
+       GuiControl,,Edi6, % fld
+	   }
+
+  }
+  If (a_guicontrol = "But7") {
+    gui, destroy
+  }
+  If (a_guicontrol = "But9") {
+    msgbox Make sure the data directory is temporary\Data instead of temporary !
+    GuiControl,,Edi1, C:\temporary
+    GuiControl,,Edi2, C:\temporary\Data
+    GuiControl,,Edi3, C:\temporary\Logs
+    GuiControl,,Edi5, temporary
+    GuiControl,,Edi6, C:\temporary
+    GuiControl,,Edi7, temporary
+	FileCreateDir, C:\temporary\Data
+	FileCreateDir, C:\temporary\Logs
+	GuiControl, , Chbx_RunModel, 1
+  }
+  If (a_guicontrol = "But10") {
+    msgbox Make sure the data directory is %Edi1%\Data or please change it
+    GuiControl,,Edi2, %Edi1%\Data
+    GuiControl,,Edi3, %Edi1%\Logs
+	
+	splits := StrSplit(Edi1, "\")
+	t := % splits[splits.MaxIndex()]
+	; StringUpper, t, t
+	; StringReplace, t, t, A_Space,   (deze code is fout)
+	
+    GuiControl,,Edi5, %t%
+    GuiControl,,Edi6, %Edi1%
+    GuiControl,,Edi7, %t%
+	FileCreateDir, %Edi1%\Data
+	FileCreateDir, %Edi1%\Logs
+	GuiControl, , Chbx_RunModel, 1
+  }
+  If (a_guicontrol = "But8") {
+
+    c01 = %Edi1%\tm1s.cfg
+
+    ; treating the TM1 data directory
+    vExisting_Cfg := FileExist(c01)
+    IniWrite, %Edi7%, %c01%, TM1S, ServerName
+
+    DataDirFolder := Edi2
+    Folder_Data_Dir = %DataDirFolder%
+    IniWrite, %Folder_Data_Dir%  , %c01%, TM1S, DataBaseDirectory
+
+    LoggingDirFolder := Edi3
+    Folder_Log_Dir = %LoggingDirFolder%
+	If FileExist( Folder_Log_Dir )
+       IniWrite, %Folder_Log_Dir%   , %c01%, TM1S, LoggingDirectory
+	Else
+	   {
+          Folder_Log_Dir = %Folder_Data_Dir%\Logs
+	      FileCreateDir, %Folder_Log_Dir%
+          IniWrite, %Folder_Log_Dir%   , %c01%, TM1S, LoggingDirectory
+	   }
+
+	IniWrite, %AdminHostChoice%  , %c01%, TM1S, AdminHost
+
+    ; add/update other much used settings in the TM1 data directory
+    If Chbx_Put_In_Default_Values = 1
+    {
+    IniWrite, 1                  , %c01%, TM1S, IntegratedSecurityMode
+    IniWrite, F                  , %c01%, TM1S, UseSSL
+    IniWrite, T                  , %c01%, TM1S, EnableTIDebugging
+    IniWrite, T                  , %c01%, TM1S, PersistentFeeders
+    IniWrite, T                  , %c01%, TM1S, EnableNewHierarchyCreation
+
+    ; OutputVar := Random( 8005, 8100 )
+    Random, OutputVar, 8005, 8100
+    If OutputVar = 8080
+       Random, OutputVar, 8005, 8100
+    IniWrite, %OutputVar%        , %c01%, TM1S, HttpPortNumber
+
+    ; OutputVar := Random( 5000, 49151 )
+    Random, OutputVar, 5000, 49151
+    IniWrite, %OutputVar%        , %c01%, TM1S, PortNumber
+
+    IniWrite, T                  , %c01%, TM1S, ParallelInteraction
+    IniWrite, T                  , %c01%, TM1S, EnableTIDebugging
+    IniWrite, T                  , %c01%, TM1S, ForceReevaluationOfFeedersForFedCellsOnDataChange
+    IniWrite, all                , %c01%, TM1S, MTQ
+
+    EnvGet, ProcessorCount, number_of_processors
+    ProcessorCount--
+    IniWrite, %ProcessorCount%   , %c01%, TM1S, MaximumCubeLoadThreads
+
+    IniWrite, F                  , %c01%, TM1S, TopLogging
+    IniWrite, 2                  , %c01%, TM1S, TopScanFrequency
+    IniWrite, T                  , %c01%, TM1S, TopScanMode.Threads
+
+    IniWrite, F                  , %c01%, TM1S, MTFeeders
+    IniWrite, Kerberos           , %c01%, TM1S, SecurityPackageName
+    IniWrite, ENG                , %c01%, TM1S, Language
+    IniWrite, T                  , %c01%, TM1S, MTQQuery
+    IniWrite, 5000               , %c01%, TM1S, MaximumViewSize
+    IniWrite, T                  , %c01%, TM1S, VersionedListControlDimensions
+    IniWrite, T                  , %c01%, TM1S, LoadPrivateSubsetsOnStartup
+    IniWrite, T                  , %c01%, TM1S, ReduceCubeLockingOnDimensionUpdate
+    IniWrite, T                  , %c01%, TM1S, EventLogging
+    IniWrite, 1                  , %c01%, TM1S, EventScanFrequency
+    IniWrite, 0                  , %c01%, TM1S, EventThreshold.PooledMemoryInMB
+    IniWrite, 5                  , %c01%, TM1S, EventThreshold.ThreadBlockingNumber
+    IniWrite, 600                , %c01%, TM1S, EventThreshold.ThreadRunningTime
+    IniWrite, 20                 , %c01%, TM1S, EventThreshold.ThreadWaitingTime
+    IniWrite, T                  , %c01%, TM1S, PullInvalidationSubsets
+    IniWrite, F                  , %c01%, TM1S, PerformanceMonitorOn
+    IniWrite, F                  , %c01%, TM1S, AuditLogOn
+    IniWrite, 1800s              , %c01%, TM1S, AuditLogUpdateInterval
+    IniWrite, 2 GB               , %c01%, TM1S, AuditLogMaxFileSize
+    IniWrite, 1 GB               , %c01%, TM1S, AuditLogMaxQueryMemory
+    IniWrite, 10                 , %c01%, TM1S, ClientPropertiesSyncInterval
+
+    IniRead, LoggingDirectory    , %c01%, TM1S, LoggingDirectory,
+    FileCreateDir, %LoggingDirectory%\FileRetry
+    IniWrite, %LoggingDirectory%\FileRetry , %c01%, TM1S, FileRetry.FileSpec
+    IniWrite, 5                  , %c01%, TM1S, FileRetry.Count
+    IniWrite, 2000               , %c01%, TM1S, FileRetry.Delay
+
+    IniRead, LoggingDirectory    , %c01%, TM1S, LoggingDirectory,
+    FileCreateDir, %LoggingDirectory%\RawStore
+    IniWrite, %LoggingDirectory%\RawStore , %c01%, TM1S, RawStoreDirectory
+    FileCreateDir, %LoggingDirectory%\DistribPlanningOutputDir
+    IniWrite, %LoggingDirectory%\DistribPlanningOutputDir , %c01%, TM1S, DistributedPlanningOutputDir
+
+    IniDelete                    , %c01%, TM1S, IPAddressV4
+    IniDelete                    , %c01%, TM1S, ServerCAMURI
+    IniDelete                    , %c01%, TM1S, ClientCAMURI
+    IniDelete                    , %c01%, TM1S, ClientPingCAMPassport
+
+    ; for my own generated files in custom TI processes, could be useful if it already exists
+    FileCreateDir, %LoggingDirectory%\TM1 output
+
+	}
+
+	; create additional folders
+    If Chbx_Create_Addit_Folders = 1
+        {
+	    FileCreateDir, %Edi6%\Install files
+	    FileCreateDir, %Edi6%\Project files\Control files
+	    FileCreateDir, %Edi6%\Project files\Documentation
+	    FileCreateDir, %Edi6%\Project files\Input\Data
+	    FileCreateDir, %Edi6%\Project files\Input\Metadata
+	    FileCreateDir, %Edi6%\Project files\Migration\From DEV to PROD
+	    FileCreateDir, %Edi6%\Project files\Migration\From PROD to DEV
+	    FileCreateDir, %Edi6%\Project files\Output
+	    FileCreateDir, %Edi6%\Project files\Progress
+	    FileCreateDir, %Edi6%\Project files\Templates
+	    FileCreateDir, %Edi6%\Project files\Testing
+	    FileCreateDir, %Edi6%\Scripts
+	    FileCreateDir, %Edi6%\TM1Backup
+	    }
+
+	; delete unnecessary lines, only for already existing tm1s.cfg files
+    If Chbx_Remove_Unnecessary_Lines = 1
+        {
+        If vExisting_Cfg
+           {
+           all =
+           Loop, Read, %c01%
+           {
+           If A_LoopReadLine=
+               Continue
+	           StringLeft, tmp, A_LoopReadLine, 1
+               If( tmp != "#" ) ;If this line isn't starting with # character
+                   all = %all%`r`n%A_LoopReadLine%
+           }
+           StringTrimLeft, all, all, 2 ;Removes first `r`n line
+           FileDelete, %c01%
+           FileAppend, %all%, %c01%
+           }
+        }
+
+    ; delete 4 cub files if the client settings need to be removed (CAM settings for example that wouldn't work anyway)
+    If Chbx_Delete_Client_Settings = 1
+        {
+           ; FileDelete, %Folder_Data_Dir%\}Client*.cub
+           FileDelete, %Folder_Data_Dir%\}ClientSettings.cub
+           FileDelete, %Folder_Data_Dir%\}ClientCAMAssociatedGroups.cub
+           FileDelete, %Folder_Data_Dir%\}ClientGroups.cub
+           FileDelete, %Folder_Data_Dir%\}ClientProperties.cub
+        }
+
+    ; delete feeders files
+    If Chbx_Delete_Feeders_Files = 1
+        {
+           FileDelete, %Folder_Data_Dir%\*.feeders
+        }
+
+    ; delete Controller cubes
+    If Chbx_Delete_Controller_Objects = 1
+        {
+           FileDelete, %Folder_Data_Dir%\*Controllerfap*.cub
+           FileDelete, %Folder_Data_Dir%\*Controllerfap*.feeders
+           FileDelete, %Folder_Data_Dir%\*Controllerfap*.rux
+           FileDelete, %Folder_Data_Dir%\*RPT_*.cub
+           FileDelete, %Folder_Data_Dir%\*RPT_*.feeders
+           FileDelete, %Folder_Data_Dir%\*RPT_*.rux
+           FileDelete, %Folder_Data_Dir%\*RPT_*.pro
+        }
+
+    ; delete applications
+    If Chbx_Delete_Applications = 1
+        {
+           FileRemoveDir, %Folder_Data_Dir%\}Applications, 1
+           FileRemoveDir, %Folder_Data_Dir%\}Externals, 1
+        }
+
+    ; delete dollar extension files
+    If Chbx_Delete_DollarExtensionFiles = 1
+        {
+           FileDelete, %Folder_Data_Dir%\*.*$
+        }
+
+    ; delete backup files
+    If vChbx_Delete_BackupFiles = 1
+        {
+           FileDelete, %Folder_Data_Dir%\*.bak
+           Loop, Files, %Folder_Data_Dir%\*.*
+           {
+             if RegExMatch( A_LoopFileExt, "\d{14}" )
+               FileDelete, %A_LoopFileFullPath%
+           }
+        }
+
+    ; chores logic
+	If ChoresChoice = Delete chores
+	   {
+       IniDelete                    , %c01%, TM1S, StartupChores
+	   FileDelete, %Folder_Data_Dir%\*.cho
+	   }
+    Else If ChoresChoice = Deactivate chores
+	   {
+           IniDelete                    , %c01%, TM1S, StartupChores
+           Loop Files, %Folder_Data_Dir%\*.cho
+           {
+		   FileRead, OutputVar, %A_LoopFileFullPath%
+           SearchTerm := "533,1"
+		   If InStr(OutputVar, SearchTerm )
+           {
+           all =
+           Loop, Read, %A_LoopFileFullPath%
+           {
+		   If A_LoopReadLine=
+               Continue
+	           StringLeft, tmp, A_LoopReadLine, 5
+               If tmp = 533,1
+				  all = %all%`r`n533,0
+               Else
+                  all = %all%`r`n%A_LoopReadLine%
+           }
+           StringTrimLeft, all, all, 2
+           FileDelete, %A_LoopFileFullPath%
+           FileAppend, %all%, %A_LoopFileFullPath%
+           }
+           }
+       }
+    Else If ChoresChoice = Activate chores
+	   {
+           Loop Files, %Folder_Data_Dir%\*.cho
+           {
+		   FileRead, OutputVar, %A_LoopFileFullPath%
+           SearchTerm := "533,0"
+		   If InStr(OutputVar, SearchTerm )
+           {
+           all =
+           Loop, Read, %A_LoopFileFullPath%
+           {
+		   If A_LoopReadLine=
+               Continue
+	           StringLeft, tmp, A_LoopReadLine, 5
+               If tmp = 533,0
+				  all = %all%`r`n533,1
+               Else
+                  all = %all%`r`n%A_LoopReadLine%
+           }
+           StringTrimLeft, all, all, 2
+           FileDelete, %A_LoopFileFullPath%
+           FileAppend, %all%, %A_LoopFileFullPath%
+           }
+           }
+       }
+
+	If AppOrService = Don't create shortcut nor service
+       {
+	      msgbox User chose to not create a service or shortcut
+	      Return
+	   }
+
+	else If AppOrService = Create a shortcut
+       {
+	   ; the shortcut to launch the model
+       FileCreateShortcut, %cPath_TM1s_exe%, %Edi6%\%Edi5%.lnk, , -z"%Edi1%"
+	   ; run the shortcut / TM1 model
+       If Chbx_RunModel = 1
+          Run, %Edi6%\%Edi5%.lnk
+	   }
+	Else If AppOrService = Create a service
+       {
+       ; full_command_line := GetParentDir( cPath_TM1s_exe, 1 )
+       ; full_command_line := full_command_line . "\tm1sd.exe -install"
+       full_command_line := cPath_TM1sd_exe
+       full_command_line := full_command_line . " -n""" . Edi5 . """"
+       full_command_line := full_command_line . " -z""" . GetParentDir( c01, 1) . """"
+       full_command_line := full_command_line . " -u" . Edi8
+       full_command_line := full_command_line . " -w" . Edi9
+
+	   If (A_IsAdmin)
+          RunWait %full_command_line%,, Hide
+       Else
+          RunWait *RunAs %full_command_line%,, Hide
+       if (ErrorLevel = "ERROR")
+          MsgBox An error was produced when creating the service to run the TM1 model. Please investigate.
+
+       full_command_line := "sc config"
+       full_command_line := full_command_line . " """ . Edi5 . """"
+       full_command_line := full_command_line . " start=auto"
+	   If (A_IsAdmin)
+	      RunWait %full_command_line%,, Hide
+
+	   ; run the shortcut / TM1 model
+       If Chbx_RunModel = 1
+          RunWait, cmd /c net start "%Edi5%",, Hide
+	   }
+
+    Return
+  }
+Return
+
+Changed_AppOrService:
+  gui, Submit, NoHide
+  If AppOrService = Create a shortcut
+     {
+	 GuiControl, Enable, But6
+	 GuiControl, Enable, Edi6
+	 GuiControl, Enable, Chbx6
+
+	 GuiControl, Disable, Edi8
+	 GuiControl, Disable, Chbx8
+
+	 GuiControl, Disable, Edi9
+	 GuiControl, Disable, Chbx9
+
+	 GuiControl,,Edi4, %cPath_TM1s_exe%
+	 }
+  Else If AppOrService = Create a service
+     {
+	 GuiControl, Disable, But6
+	 GuiControl, Disable, Edi6
+	 GuiControl, Disable, Chbx6
+
+	 GuiControl, Enable, But8
+	 GuiControl, Enable, Edi8
+	 GuiControl, Enable, Chbx8
+
+	 GuiControl, Enable, But9
+	 GuiControl, Enable, Edi9
+	 GuiControl, Enable, Chbx9
+
+	 GuiControl,,Edi4, %cPath_TM1sd_exe%
+	 }
+  return
+
+
+Changed_Editbox:
+  gui, Submit, NoHide
+  If (a_guicontrol = "Edi1") {
+
+     IfExist, %Edi1%
+	    GuiControl, , Chbx1, 1
+     Else
+	    GuiControl, , Chbx1, 0
+
+     c01 = %Edi1%\tm1s.cfg
+     IfExist, %c01%
+	    {
+		; retrieve the data dir and logging
+		IniRead, DataDirFolder,    %c01%, TM1S, DataBaseDirectory,
+        If ( InStr( DataDirFolder, ".", false ) > 0 ) OR ( InStr( DataDirFolder, "..", false ) > 0 )
+        {
+            base = %Edi1%
+            rel = %DataDirFolder%
+            DataDirFolder := % PathCombine(base, rel)
+		}
+        IfExist, %DataDirFolder%
+            {
+			GuiControl, , Chbx2, 1
+            GuiControl, , Edi2, %DataDirFolder%
+			}
+        Else
+            {
+			GuiControl, , Chbx2, 0
+			}
+
+        IniRead, LoggingDirFolder,    %c01%, TM1S, LoggingDirectory,
+        If ( InStr( LoggingDirFolder, ".", false ) > 0 ) OR ( InStr( LoggingDirFolder, "..", false ) > 0 )
+        {
+            base = %Edi1%
+            rel = %LoggingDirFolder%
+            LoggingDirFolder := % PathCombine(base, rel)
+		}
+        IfExist, %LoggingDirFolder%
+            {
+			GuiControl, , Chbx3, 1
+			GuiControl, , Edi3, %LoggingDirFolder%
+			}
+        Else
+            GuiControl, , Chbx3, 0
+
+		x = %Edi1%
+        StringGetPos, p1, x, \ , R1
+        Stringtrimleft, vCustomer, x, (p1+1)
+        GuiControl, , Edi5, %vCustomer%
+
+        ; for the path of the shortcut, take the parent folder
+		p := GetParentDir(x, 1)
+        GuiControl, , Edi6, %p%
+
+        IniRead, TM1ServerName       , %c01%, TM1S, ServerName, E
+        GuiControl, , Edi7, %TM1ServerName%
+	    }
+     Else
+     {
+		If Edi1 <> C:\temporary
+		{
+		GuiControl, , Edi2,
+		GuiControl, , Edi3,
+		GuiControl, , Edi7,
+		}
+     }
+  }
+  If (a_guicontrol = "Edi2") {
+     IfExist, %Edi2%
+	    GuiControl, , Chbx2, 1
+     Else
+	    GuiControl, , Chbx2, 0
+  }
+  If (a_guicontrol = "Edi3") {
+     IfExist, %Edi3%
+	    GuiControl, , Chbx3, 1
+     Else
+	    GuiControl, , Chbx3, 0
+  }
+  If (a_guicontrol = "Edi4") {
+     IfExist, %Edi4%
+	    GuiControl, , Chbx4, 1
+     Else
+	    GuiControl, , Chbx4, 0
+  }
+  If (a_guicontrol = "Edi5") {
+     If( Trim(Edi5) <> "" )
+         {
+         IfNotExist, %Edi6%\%Edi5%.lnk
+	        GuiControl, , Chbx5, 1
+         Else
+	        GuiControl, , Chbx5, 0
+		}
+     Else
+	    GuiControl, , Chbx5, 0
+  }
+  If (a_guicontrol = "Edi6") {
+     IfExist, %Edi6%
+	    GuiControl, , Chbx6, 1
+     Else
+	    GuiControl, , Chbx6, 0
+  }
+  If (a_guicontrol = "Edi7") {
+     If( Trim(Edi6) <> "" )
+	    GuiControl, , Chbx7, 1
+     Else
+	    GuiControl, , Chbx7, 0
+  }
+  If (a_guicontrol = "Edi8") {
+     If( Trim(Edi8) <> "" )
+	    GuiControl, , Chbx8, 1
+     Else
+	    GuiControl, , Chbx8, 0
+  }
+  If (a_guicontrol = "Edi9") {
+     If( Trim(Edi9) <> "" )
+	    GuiControl, , Chbx9, 1
+     Else
+	    GuiControl, , Chbx9, 0
+  }
+
+return
+
+tm1_as_appGuiEscape:
+  gui, destroy
+  ; ExitApp
+return
+}
+	
+	else if(menuItem = "Convert to Expand")
     {
         Send {Esc 2}
         ; Gosub convert_to_expand
@@ -976,5 +1721,136 @@ Add_Text(s1, s2, m)
 			erbij := "`r`n" . s2
 	}
     return erbij
+}
+return
+
+PathCombine(abs, rel) {
+    VarSetCapacity(dest, (A_IsUnicode ? 2 : 1) * 260, 1) ; MAX_PATH
+    DllCall("Shlwapi.dll\PathCombine", "UInt", &dest, "UInt", &abs, "UInt", &rel)
+    Return, dest
+}
+
+GetParentDir(Path,Count=1,Delimiter="\") {
+  While (InStr(Path,Delimiter) <> 0 && Count <> A_Index - 1)
+    Path := SubStr(Path,1,InStr(Path,Delimiter,0,0) - 1)
+  Return Path
+    }
+
+GetSelectedFileFolderNames_UnderCursor()
+{
+	ToReturn =
+	hwnd := hwnd ? hwnd : WinExist("A")
+	WinGetClass class, ahk_id %hwnd%
+	if (class="CabinetWClass" or class="ExploreWClass")
+	{
+		for window in ComObjCreate("Shell.Application").Windows
+			if (window.hwnd==hwnd)
+	        {
+               sel := window.Document.SelectedItems
+	           for item in sel
+	           {
+                  v := % item.path
+			      ToReturn .= v "`n"
+               }
+            }
+    }
+	else
+    {
+	   files:={}
+	   sel:=""
+	   if (class="Progman" or class="WorkerW")
+          FolderPath = %A_Desktop%
+       else if WinActive("ahk_class CabinetWClass")
+		  ; http://ahkscript.org/boards/viewtopic.php?p=28751#p28751
+		  for window in ComObjCreate("Shell.Application").Windows
+		      try FolderPath := window.Document.Folder.Self.Path
+       ControlGet, win, HWND,, SysListView321, A
+       ControlGet, sel, List, Selected Col1,,ahk_id %win%
+       Loop, parse, sel, `n, `r
+          files.push(A_LoopField)
+       for each, file in files
+       {
+          FileGetAttrib, FileAttrib, %FolderPath%\%file%
+          If InStr(FileAttrib, "D") ; a DIRECTORY
+          {
+             Loop, %FolderPath%\%file%, 2,0	; only folders
+             {
+                StringReplace, FileFullPath, A_LoopFileFullPath, :\\ ,:\
+                ; MsgBox, DIRECTORY: "%FileFullPath%"
+                v = %FileFullPath%
+			    ToReturn .= v "`n"
+             }
+          }
+          else
+          {
+             Loop, %FolderPath%\%file%.*
+             {
+                ; MsgBox, FILE: "%A_LoopFileFullPath%"
+                v := % A_LoopFileFullPath
+		        ToReturn .= v "`n"
+             }
+          }
+       }
+	}
+    ToReturn := Trim(ToReturn,"`n")
+	return ToReturn
+}
+
+GetSelectedFileFolderNames_FolderYouSee()
+{
+    ToReturn =
+    ; WinGetClass, class, A
+	hwnd := hwnd ? hwnd : WinExist("A")
+	WinGetClass class, ahk_id %hwnd%
+    if (class="CabinetWClass" or class="ExploreWClass")
+    {
+        ControlGetText, currentpath, ToolbarWindow323, ahk_class %class%
+        StringTrimLeft, currentpath, currentpath, 9
+        if( SubStr( currentpath, 0, 1) == "\")
+           currentpath := SubStr(currentpath, 1, StrLen( currentpath ) - 1 )
+        ToReturn .= currentpath "`n"
+        ToReturn := Trim(ToReturn,"`n")
+        Return ToReturn
+    }
+	else if (class="Progman" or class="WorkerW")
+    {
+        currentpath = %A_Desktop%
+        ToReturn .= currentpath "`n"
+        ToReturn := Trim(ToReturn,"`n")
+        Return ToReturn
+    }
+    Return
+}
+
+ExpandEnvVars(sEV)
+{
+	VarSetCapacity(dest, 2000)
+	DllCall("ExpandEnvironmentStrings", "str", sEV, "str", dest, int, 1999, "Cdecl int")
+	return dest
+}
+return
+
+ReplaceEnvVars(sLocation)
+{
+	if ( InStr( sLocation, "%HO%", false ) > 0 )
+	   sLocation := StrReplace(sLocation, "%HO%", ExpandEnvVars("%HO%"))
+	return sLocation
+}
+return
+
+fRework_Path(s)
+{
+    s := StrReplace(s, "https://aexisnv-my.sharepoint.com/personal/wgielis_aexis_com/Documents/", "%HO%\")
+    s := StrReplace(s, "/", "\")
+    s := ReplaceEnvVars(s)
+    return s
+}
+return
+
+InsertEnvVars(sLocation)
+{
+	if ( InStr( sLocation, ExpandEnvVars("%HO%"), false ) > 0 )
+	   sLocation := StrReplace(sLocation, ExpandEnvVars("%HO%"), "%HO%")
+	return sLocation
 }
 return
