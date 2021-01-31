@@ -860,20 +860,23 @@ menuHandler:
 		; -     (so please select the name of a TI process, for example inside an ExecuteProcess statement)
 		; ####################################################
 
-        WinGetTitle, TM1_Window_Title, A
+        WinGetTitle, Window_Title, A
         WinGetClass, class, A
+        FullCaption := Window_Title
 
         process := Clipboard
         GoSub, ReadIn_TM1_models_Settings
         vFile=%cPath_TM1_model_Main%%process%.pro
         IfExist, %vFile%
            { }
-        else if InStr( TM1_Window_Title, "Turbo Integrator:", false ) = 1
+        else if InStr( Window_Title, "Turbo Integrator:", false ) = 1
            {
-           FullCaption = %TM1_Window_Title%
-           StringReplace, FullCaption, FullCaption, ->, ``, All
-           StringSplit, arrprocess, FullCaption, ``
-           process := trim(arrprocess2)
+           ; FullCaption = %Window_Title%
+           ; StringReplace, FullCaption, FullCaption, ->, ``, All
+           ; StringSplit, arrprocess, FullCaption, ``
+           ; process := trim(arrprocess2)
+		   StringSplit, process, FullCaption, "->"
+		   process := trim(process%process0%)
            }
         else if (class="CabinetWClass")||(class="ExploreWClass")||(class="Progman") ; File Explorer
            {
