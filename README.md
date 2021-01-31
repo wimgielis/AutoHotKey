@@ -6,7 +6,7 @@ Download the exe file and store it anywhere you like.
 A set of tools can be started by pressing the F10 function key. A menu will appear.
 Most tools are to be used in Notepad++ or TM1 Architect/Perspectives (notably, Turbo Integrator and the Rules Editor).
 
-The corresponding AHK file contains the source code. Please keep my headers inside.
+The corresponding AHK file contains the source code. Please keep my headers inside. The original idea comes from here, although a lot of the code has changed and is created by myself: https://code.cubewise.com/ti-helper
 To reload the menu, press Ctrl-F10.
 
 I also put out my custom "user defined languages" in Notepad++. I add TM1 and AHK language syntax support.
