@@ -33,7 +33,7 @@ ToolsArray := Object()
 ;~~~~~~~~~~~~~~~~~~~
 ; INITIALISATION
 ;~~~~~~~~~~~~~~~~~~~
-
+cPath_TM1_model_Main := "D:\path to my data directory with trailing backslash\"
 GoSub, LoadMenu
 
 ;~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -272,6 +272,11 @@ LoadMenu:
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
 
 	toolName:= "Open the PRO file"
+
+	ToolsArray.Insert([toolName])
+	Menu,ToolsSubmenu,add,%toolName%,menuHandler
+
+	toolName:= "File backup with timestamp"
 
 	ToolsArray.Insert([toolName])
 	Menu,ToolsSubmenu,add,%toolName%,menuHandler
@@ -844,10 +849,78 @@ menuHandler:
 		gosub Read_in_AO_vars
         return
     }
-    else if(menuItem = "Open the PRO file")
+    else if(menuItem = "File backup with timestamp")
     {
 	
-        cPath_TM1_model_Main := "D:\path to my data directory with trailing backslash\"
+		; ####################################################
+		; # Purpose of the script:
+		; - automatically backup with a timestamp what you are working on
+		; - this is done for:
+		; - * a file in Notepad++
+		; - * the PRO file that you are (implicitly) looking at in TM1 Architect/Perspectives in the TI editor
+		; - * the RUX file that you are (implicitly) looking at in TM1 Architect/Perspectives in the Rules editor
+		; - * an Excel file
+		; ####################################################
+
+		WinGetTitle, Window_Title, A
+		FullCaption := Window_Title
+
+		FormatTime, suffix,, (yyyy-MM-dd HHmmss)
+		; suffix := " (" a_YYYY "-" a_MM "-" a_DD " " a_Hour a_Min a_Sec ")"
+
+		vFile_New = 
+
+		if InStr( Window_Title, "Turbo Integrator:", false ) = 1
+		   {
+		   StringSplit, process, FullCaption, "->"
+		   process := trim(process%process0%)
+		   vFile = %cPath_TM1_model_Main%%process%.pro
+
+		   IfNotExist, %vFile%
+			  {
+			  Msgbox TI process %process% leads to a file that does not exist: %vFile%
+			  return
+			  }
+		   }
+
+		else if InStr( Window_Title, "Rules Editor:", false ) = 1
+		   {
+		   StringSplit, cube, FullCaption, "->"
+		   cube := trim(cube%cube0%)
+		   vFile = %cPath_TM1_model_Main%%cube%.rux
+		   IfNotExist, %vFile%
+			  {
+			  Msgbox Rule for cube %cube% leads to a file that does not exist: %vFile%
+			  return
+			  }
+		   }
+
+		else if WinActive("ahk_class Notepad++")
+		   {
+		   WinMenuSelectItem, , , Edit, Copy to Clipboard, Current Full File path to Clipboard
+		   Sleep 100
+		   vFile := Clipboard
+		   }
+
+		else
+		   {
+		   vFile := % ComObjActive("excel.application").ActiveWorkbook.FullName
+		   vFile := % fRework_Path(vFile)
+		   }
+
+		; copy the file with a timestamp
+		IfExist, %vFile%
+		   {
+		   SplitPath, vFile, , dir, ext, f
+		   vFile_New := % dir . "\" . f . " " suffix "." ext
+		   }
+
+		If vFile !=
+		   If vFile_New !=
+			  FileCopy, %vFile%, %vFile_New%
+	}
+        else if(menuItem = "Open the PRO file")
+    {
 
 		; ####################################################
 		; # Purpose of the script:
