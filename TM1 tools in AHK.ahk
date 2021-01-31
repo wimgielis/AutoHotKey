@@ -847,7 +847,7 @@ menuHandler:
     else if(menuItem = "Open the PRO file")
     {
 	
-        cPath_TM1_model_Main := "D:\path to my data directory with trailing backslash"
+        cPath_TM1_model_Main := "D:\path to my data directory with trailing backslash\"
 
 		; ####################################################
 		; # Purpose of the script:
@@ -865,7 +865,6 @@ menuHandler:
         FullCaption := Window_Title
 
         process := Clipboard
-        GoSub, ReadIn_TM1_models_Settings
         vFile=%cPath_TM1_model_Main%%process%.pro
         IfExist, %vFile%
            { }
@@ -906,8 +905,7 @@ menuHandler:
            }
         else
            msgbox %vFile% does not exist
-        }
-        return
+    }
 
 	else if(menuItem = "A new TM1 model (in File Explorer)")
     {
@@ -1922,5 +1920,22 @@ InsertEnvVars(sLocation)
 	if ( InStr( sLocation, ExpandEnvVars("%HO%"), false ) > 0 )
 	   sLocation := StrReplace(sLocation, ExpandEnvVars("%HO%"), "%HO%")
 	return sLocation
+}
+return
+
+; https://autohotkey.com/board/topic/60723-can-autohotkey-retrieve-file-path-of-the-selected-file/page-2
+Explorer_GetSelection(hwnd="") {
+	hwnd := hwnd ? hwnd : WinExist("A")
+	WinGetClass class, ahk_id %hwnd%
+	if (class="CabinetWClass" or class="ExploreWClass" or class="Progman")
+		for window in ComObjCreate("Shell.Application").Windows
+			if (window.hwnd==hwnd)
+    sel := window.Document.SelectedItems
+	for item in sel
+	{
+    ToReturn .= item.path "`n"
+    Break
+    }
+	return Trim(ToReturn,"`n")
 }
 return
