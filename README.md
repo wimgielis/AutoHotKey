@@ -21,3 +21,4 @@ Last update:
 - Pressing F10 is also allowed in Windows File Explorer (to cater for the tool described below)
 - Jan. 30, 2021: a new TM1 model (in File Explorer, navigate to the desired folder and hit F10 and choose the new option in the menu)
 - Jan. 31, 2021: automatically open up a PRO file from disk in Notepad++ based on: opened TI process in the TI editor, or selected text in Notepad++, or the selected error log file in File Explorer (enter in the AHK file the TM1 data directory: cPath_TM1_model_Main := "D:\path to my data directory with trailing backslash\" and use that one, optionally compile the AHK file to a new EXE file)
+- Jan. 31, 2021: automatically backup with a timestamp what you are working on: a file in Notepad++, the TI process that you are looking at in TM1 Architect/Perspectives, the RUX file that you are looking at in TM1 Architect/Perspectives, even the Excel file you are looking at.
