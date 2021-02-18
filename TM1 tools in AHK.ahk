@@ -393,7 +393,7 @@ menuHandler:
 		; ####################################################
 
 
-		vProcess := Get_Process_Name( "", "___Current process" )
+		vProcess := Get_Process_FullFileName( "", "___Current process" )
 
 		Gui, Destroy
 
@@ -1796,6 +1796,67 @@ Get_Process_Name( Server, Process )
 return
 }
 
+Get_Process_FullFileName( Server, Process )
+{
+    if ( Process <> "___Current process" )
+       return %Process%
+
+    WinGetTitle, Window_Title, A
+    if InStr( Window_Title, "Turbo Integrator:", false ) = 1
+    {
+        Arr_Caption := StrSplit(Window_Title, "->")
+        vProcess := trim(Arr_Caption[2])
+        If( Server = "" )
+             {
+             Server := trim(Arr_Caption[1])
+             Arr_Server := StrSplit(Server, "Turbo Integrator:")
+             Server := trim(Arr_Server[2])
+             }
+        DataDir := GetSetting_ByServer( Server, "tm1datadirectory" )
+        vFile = %DataDir%%vProcess%.pro
+        IfExist, %vFile%
+			return %vFile%
+        Else
+			return
+    }
+    else if ( InStr( Window_Title, "Notepad++", false ) > 0 )
+    {
+       DataDir := GetSetting_ByServer( Server, "tm1datadirectory" )
+       If( DataDir = "" )
+       {
+           Arr_Caption := StrSplit(Window_Title, " - Notepad++")
+           vFile := trim(Arr_Caption[1])
+
+           ; vFile = %Window_Title%
+           ; vFile := StrReplace(vFile, " - Notepad++", "")
+           ; vFile := StrReplace(vFile, " [Administrator]", "")
+           IfInString, vFile, *
+              vFile := % Substr( vFile, 2 )
+           IfExist, %vFile%
+              Return %vFile%
+       }
+       else
+	   {
+		   Arr_Caption := StrSplit(Window_Title, " - Notepad++")
+           vFile := trim(Arr_Caption[1])
+
+           ; vFile = %Window_Title%
+           ; vFile := StrReplace(vFile, " - Notepad++", "")
+           ; vFile := StrReplace(vFile, " [Administrator]", "")
+           IfInString, vFile, *
+              vFile := % Substr( vFile, 2 )
+           IfExist, %vFile%
+           {
+              SplitPath, vFile, , vDir, OutExtension, Filename
+              vDir .= "\"
+              If( OutExtension = "pro" )
+                 If( DataDir = vDir )
+                    return %Filename%
+           }
+       }
+    }
+return
+}
 
 Get_TI_Code_Tab( )
 {
