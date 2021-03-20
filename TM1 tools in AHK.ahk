@@ -403,7 +403,7 @@ menuHandler:
 
 		Gui, Add, Button, gAO_SelectALL x15, Select all
 		Gui, Add, Button, gAO_ReloadVars x+30, Reload variables
-		Gui, Add, ListView, x10 w400 h500, Variable Type|Variable Name|Data Type
+		Gui, Add, ListView, x10 w400 h500 gMyListView AltSubmit, Variable Type|Variable Name|Data Type|Order
 		Gui, Add, ListBox, 8 x+10 w150 r9 Choose1 vShow_Which_Variables gShow_Which_Variables, All|Parameters|Data source variables|Data source new variables|Custom variables|   in the Prolog tab|   in the Metadata tab|   in the Data tab|   in the Epilog tab
 		Gui, Add, ListBox, AltSubmit ReadOnly y+30 w150 r3 vSwitch_Text_Number gSwitch_Text_Number, Text <--> Number|--> Text|--> Number
 		Gui, Add, Button, gAO_OK y+40, Generate output
@@ -435,6 +435,28 @@ menuHandler:
 		LV_ModifyCol()  ; Auto-size each column to fit its contents
 		Gui, Show, w600 h850, Output variables to a text file                                                         (c) 2021 - Wim Gielis
 
+        return
+		
+        MyListView:
+        gui, Submit, noHide
+		if ( A_GuiEvent = "Normal" )
+        {
+           if ( Output_in_Selected_Order = True )
+           {
+		       ; find the highest order number and increment
+               Selected_Row = %A_EventInfo%
+               dMax := 0
+			   Loop % LV_GetCount()
+               {
+                   LV_GetText(Text, A_Index, 4)
+				   Number := ("0" . Text), Number += 0
+                   if ( Number > dMax )
+                       dMax := Number
+               }
+		       LV_Modify(Selected_Row, "Col4", dMax + 1)
+		   }
+        LV_ModifyCol(4, "Integer")
+        }
         return
 
 		Show_Which_Variables:
@@ -786,18 +808,37 @@ menuHandler:
 				sOutput .= "'" . Edi1 . "'"
 			}
 
-			RowNumber := 0
-			Loop
-			{
-				RowNumber := LV_GetNext(RowNumber)
-				if not RowNumber
-					break
-				LV_GetText(Var_Name, RowNumber, 2)
-				If ( Names_of_variables = False )
-					sOutput .= Add_Text(sOutput, ", '" . Var_Name . "'", m)
-				Else
-					sOutput .= Add_Text(sOutput, ", '" . Var_Name . "'" . ", '" . Var_Name . " value'", m)
-			}
+			if ( Output_in_Selected_Order = True )
+            {
+		       LV_ModifyCol(4, "Sort")
+			   Loop % LV_GetCount()
+               {
+                   LV_GetText(Text, A_Index, 4)
+                   if ( Text != "" )
+                   {
+                       LV_GetText(Var_Name, A_Index, 2)
+                       If ( Names_of_variables = False )
+                          sOutput .= Add_Text(sOutput, ", '" . Var_Name . "'", m)
+                       Else
+                          sOutput .= Add_Text(sOutput, ", '" . Var_Name . "'" . ", '" . Var_Name . " value'", m)
+                   }
+               }
+            }
+            else
+            {
+		       RowNumber := 0
+               Loop
+               {
+                  RowNumber := LV_GetNext(RowNumber)
+                  if not RowNumber
+                     break
+                  LV_GetText(Var_Name, RowNumber, 2)
+                  If ( Names_of_variables = False )
+                     sOutput .= Add_Text(sOutput, ", '" . Var_Name . "'", m)
+                  Else
+                     sOutput .= Add_Text(sOutput, ", '" . Var_Name . "'" . ", '" . Var_Name . " value'", m)
+               }
+            }
 			sOutput .= " );" . e
 			sOutput .= "EndIf;" . e
 			sOutput .= "vCounter = vCounter + 1;" . e . e
@@ -821,40 +862,82 @@ menuHandler:
 				sOutput .= "'" . Edi1 . "'"
 			}
 
-			RowNumber := 0
-			Loop
+			if ( Output_in_Selected_Order = True )
+            {
+		       LV_ModifyCol(4, "Sort")
+			   Loop % LV_GetCount()
+               {
+                   LV_GetText(Text, A_Index, 4)
+                   if ( Text != "" )
+                   {
+                        LV_GetText(Var_Name, A_Index, 2)
+                        LV_GetText(Var_Type, A_Index, 3)
+                        StringLower, vVar_Name, Var_Name
+                        
+                        If ( Names_of_variables = False )
+                        {
+                            If ( Var_Type = "Number" )
+                            {
+                                If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
+                                    sOutput .= Add_Text(sOutput, ", NumberToString( " . Var_Name . " )", m)
+                                Else
+                                    sOutput .= Add_Text(sOutput, ", NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
+                            }
+                            Else
+                                sOutput .= Add_Text(sOutput, ", " . Var_Name, m)
+                        }
+                        Else
+                        {
+                            If ( Var_Type = "Number" )
+                            {
+                                If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
+                                    sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToString( " . Var_Name . " )", m)
+                                Else
+                                    sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
+                            }
+                            Else
+                                sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . Var_Name, m)
+                        }
+                    }
+               }
+            }
+			else
 			{
-				RowNumber := LV_GetNext(RowNumber)
-				if not RowNumber
-					break
-				LV_GetText(Var_Name, RowNumber, 2)
-				LV_GetText(Var_Type, RowNumber, 3)
-				StringLower, vVar_Name, Var_Name
-
-				If ( Names_of_variables = False )
-				{
-					If ( Var_Type = "Number" )
-						{
-						If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
-							sOutput .= Add_Text(sOutput, ", NumberToString( " . Var_Name . " )", m)
-						Else
-							sOutput .= Add_Text(sOutput, ", NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
-						}
-					Else
-						sOutput .= Add_Text(sOutput, ", " . Var_Name, m)
-				}
-				Else
-				{
-					If ( Var_Type = "Number" )
-						{
-						If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
-							sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToString( " . Var_Name . " )", m)
-						Else
-							sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
-						}
-					Else
-						sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . Var_Name, m)
-				}
+                RowNumber := 0
+                Loop
+                {
+                    RowNumber := LV_GetNext(RowNumber)
+                    if not RowNumber
+                        break
+                    LV_GetText(Var_Name, RowNumber, 2)
+                    LV_GetText(Var_Type, RowNumber, 3)
+                    StringLower, vVar_Name, Var_Name
+                    
+                    If ( Names_of_variables = False )
+                    {
+                        If ( Var_Type = "Number" )
+                        {
+                            If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
+                                sOutput .= Add_Text(sOutput, ", NumberToString( " . Var_Name . " )", m)
+                            Else
+                                sOutput .= Add_Text(sOutput, ", NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
+                        }
+                        Else
+                            sOutput .= Add_Text(sOutput, ", " . Var_Name, m)
+                    }
+                    Else
+                    {
+                        If ( Var_Type = "Number" )
+                        {
+                            If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
+                                sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToString( " . Var_Name . " )", m)
+                            Else
+                                sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
+                        }
+                        Else
+                            sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . Var_Name, m)
+                    }
+                }
 			}
 			sOutput .= " );"
 
