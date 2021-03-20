@@ -389,11 +389,13 @@ menuHandler:
 		; # - A tab control on the gui containing a 'live' preview of what the code would create (with manual adjustment)
 		; # - Use the Windows registry to save to and load from for choices in the gui (not needed to redo everything)
 		; # - No REST API used and needed for now, I parse a text file and that's it
-		; # - Notepad++ is needed
+		; # - 
 		; ####################################################
 
 
 		vProcess := Get_Process_FullFileName( "", "___Current process" )
+		if vProcess =
+		   vProcess := "No PRO file"
 
 		Gui, Destroy
 
@@ -444,7 +446,19 @@ menuHandler:
 		LV_Delete()
 
 		guiControlGet, sFullFilename,, FullFilename
-		FileRead, FileContents, %sFullFilename%
+		if ( sFullFilename = "No PRO file" )
+            {
+			if ( sSaved_Title != "" )
+			    Title := sSaved_Title
+			else
+				WinGetTitle, Title, A
+			WinGetText, text, %Title%
+            FileContents := text
+			if ( sSaved_Title = "" )
+			     sSaved_Title := Title
+			}
+		else
+		    FileRead, FileContents, %sFullFilename%
 
 
 		; 1. parameters
@@ -587,11 +601,22 @@ menuHandler:
 		Or InStr( Show_Which_Variables, "   in the Epilog tab", false ) > 0
 		{
 			Text_of_vars :=
-			Text_of_vars_1234 := StringBetween( FileContents, "572,", "576," )
-			Text_of_vars_1    := StringBetween( FileContents, "572,", "573," )
-			Text_of_vars_2    := StringBetween( FileContents, "573,", "574," )
-			Text_of_vars_3    := StringBetween( FileContents, "574,", "575," )
-			Text_of_vars_4    := StringBetween( FileContents, "575,", "576," )
+			if ( sFullFilename = "No PRO file" )
+			{
+				Text_of_vars_1234 := FileContents
+				Text_of_vars_1    := 
+				Text_of_vars_2    := 
+				Text_of_vars_3    := 
+				Text_of_vars_4    := 
+			}
+			else
+			{
+				Text_of_vars_1234 := StringBetween( FileContents, "572,", "576," )
+				Text_of_vars_1    := StringBetween( FileContents, "572,", "573," )
+				Text_of_vars_2    := StringBetween( FileContents, "573,", "574," )
+				Text_of_vars_3    := StringBetween( FileContents, "574,", "575," )
+				Text_of_vars_4    := StringBetween( FileContents, "575,", "576," )
+			}
 
 			if InStr( Show_Which_Variables, "All", false ) = 1
 			Or InStr( Show_Which_Variables, "Custom variables", false ) > 0
