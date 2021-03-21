@@ -404,6 +404,7 @@ menuHandler:
 		Gui, Add, Button, gAO_SelectALL x15, Select all
 		Gui, Add, Button, gAO_ReloadVars x+30, Reload variables
 		Gui, Add, ListView, x10 w400 h500 gMyListView AltSubmit, Variable Type|Variable Name|Data Type|Order
+        LV_ModifyCol(4, "Integer")
 		Gui, Add, ListBox, 8 x+10 w150 r9 Choose1 vShow_Which_Variables gShow_Which_Variables, All|Parameters|Data source variables|Data source new variables|Custom variables|   in the Prolog tab|   in the Metadata tab|   in the Data tab|   in the Epilog tab
 		Gui, Add, ListBox, AltSubmit ReadOnly y+30 w150 r3 vSwitch_Text_Number gSwitch_Text_Number, Text <--> Number|--> Text|--> Number
 		Gui, Add, Button, gAO_OK y+40, Generate output
@@ -413,12 +414,12 @@ menuHandler:
 		Gui, Add, edit, vEdi1 x+20 w160 r1, test.txt
 		Gui, Add, CheckBox, y+10 vVariable_Filename, Variable
 
-        Gui, Add, CheckBox, x10 y+15 vAdd_Output_Settings, Add output settings
+        Gui, Add, CheckBox, x10 y+15 Checked vOutput_in_Selected_Order gOutput_in_Selected_Order, Output variables in selected order
+        Gui, Add, CheckBox, x10 vAdd_Output_Settings, Add output settings
         Gui, Add, CheckBox, x10 vNumbers_NumberFormat, Numbers get a numberformat
 
         Gui, Add, CheckBox, x10 vNames_of_variables, Insert names of variables
         Gui, Add, CheckBox, x10 vHeader, Add code for a header
-        Gui, Add, CheckBox, x10 vOutput_in_Selected_Order, Output variables in selected order
 
 		Gui, Add, ListBox, AltSubmit Choose1 x10 y+15 w150 r3 vLine_Splitter, No split|Multiline output|Split long lines
 
@@ -449,13 +450,43 @@ menuHandler:
 			   Loop % LV_GetCount()
                {
                    LV_GetText(Text, A_Index, 4)
-				   Number := ("0" . Text), Number += 0
+                   Number := ("0" . Text), Number += 0
                    if ( Number > dMax )
                        dMax := Number
                }
-		       LV_Modify(Selected_Row, "Col4", dMax + 1)
+               LV_GetText(Text, Selected_Row, 4)
+               Number := ("0" . Text), Number += 0
+		       If ( Number < dMax Or Number = 0 )
+			       {
+				   n := dMax + 1
+		           LV_Modify(Selected_Row, "Col4", n)
+				   }
+		       ; how many have a number ?
+		       If ( Number > 0 )
+               {
+			       countof := 0
+			       Loop % LV_GetCount()
+                   {
+                       LV_GetText(Text, A_Index, 4)
+                       If ( Text != "" )
+                           countof += 1
+                   }
+			       If ( n > countof )
+                   {
+			           Loop % LV_GetCount()
+                       {
+                           LV_GetText(Text, A_Index, 4)
+                           If ( Text != "" )
+                           {
+                               Number2 := ("0" . Text), Number2 += 0
+                               If ( Number2 > Number )
+				    		       LV_Modify(A_Index, "Col4", Number2 - 1)
+                           }
+                       }
+                   }
+               }
 		   }
-        LV_ModifyCol(4, "Integer")
+								  
         }
         return
 
@@ -700,9 +731,24 @@ menuHandler:
 		}
 		return
 
+		Output_in_Selected_Order:
+		Gui, Submit, NoHide		
+		if ( Output_in_Selected_Order = True )
+        {}
+		else
+		{
+		    Loop % LV_GetCount()
+                LV_Modify(A_Index, "Col4", "")
+        }
+		return
+
 		AO_SelectALL:
 		Gui, Submit, NoHide
 		LV_Modify(0, "Select")
+
+        if ( Output_in_Selected_Order = True )
+		    Loop % LV_GetCount()
+                LV_Modify(A_Index, "Col4", A_Index)
 		return
 
 		Switch_Text_Number:
