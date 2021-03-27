@@ -605,19 +605,19 @@ menuHandler:
 					; remove the linebreak
 					StringTrimRight, my_param_type, my_param_type, 1
 
-					If ( A_index < Nr_of_vars_without_builtin + 2 )
-					{
-						If ( my_param_type = 2 )
-							LV_Add("", "Data source var", my_param_name, "Text")
-						Else
-							LV_Add("", "Data source var", my_param_name, "Number")
-					}
-					Else
+					If (( my_param_name = "NValue" ) Or ( my_param_name = "SValue" ) Or ( my_param_name = "value_is_STRING" ))
 					{
 						If ( my_param_type = 2 )
 							LV_Add("", "View var", my_param_name, "Text")
 						Else
 							LV_Add("", "View var", my_param_name, "Number")
+					}
+					Else
+					{
+						If ( my_param_type = 2 )
+							LV_Add("", "Data source var", my_param_name, "Text")
+						Else
+							LV_Add("", "Data source var", my_param_name, "Number")
 					}
 
 					if A_index > % Nr_of_vars
@@ -717,6 +717,7 @@ menuHandler:
 			{
 			   m := StrReplace(m, "=", "")
 			   m := StrReplace(m, A_Space, "")
+               m := StrReplace(m, A_Tab, "")
 			   m := StrReplace(m, "`r`n", "")
 			   allMatches .= (!allMatches ? "" : "`n") m
 			}
@@ -731,40 +732,59 @@ menuHandler:
 			Text_of_vars_no_whitespace := StrReplace(Text_of_vars, A_Space)
 			Text_of_vars_no_whitespace := StrReplace(Text_of_vars_no_whitespace, A_Tab)
 			e := "`r`n"
+
+            Lookup_VarType := ["2|'", "1|CellGetN", "2|CellGetS", "1|AttrN", "2|AttrS", "1|StringToNumber", "2|NumberToString", "2|SubsetGetElementName", "1|SubsetGetSize", "2|Trim", "2|Subst", "1|Scan", "1|ElparN", "2|Elpar", "1|ElIspar", "1|ElcompN", "2|ElComp", "1|ElIsComp", "2|Long", "1|Dimix", "1|Dimsiz", "2|Dimnm", "2|Dtype", "2|Expand", "2|Tabdim", "2|Delet", "2|Insrt", "2|Upper", "2|Lower", "2|Char", "2|DimensionElementPrincipalName", "2|GetProcessName", "2|TM1User", "2|Timst", "1|Dayno", "2|GetProcessErrorFileDirectory", "1|ExecuteProcess", "1|RunProcess" ]
+
 			VarArray := StrSplit(out, "`n")
 			Loop % VarArray.MaxIndex()
 			{
 				my_var_name := VarArray[A_Index]
 				StringLower, vmy_var_name, my_var_name
 
+				Found := 0
+
 				if( vmy_var_name = "datasourceasciidelimiter"
 				 Or vmy_var_name = "datasourceasciiquotecharacter"
 				 Or vmy_var_name = "datasourceasciidecimalseparator"
 				 Or vmy_var_name = "datasourceasciithousandseparator"
 				 Or vmy_var_name = "datasourceasciiheaderrecords"
+				 Or vmy_var_name = "datasourcetype"
+				 Or vmy_var_name = "datasourcenameforserver"
+				 Or vmy_var_name = "datasourcenameforclient"
+				 Or vmy_var_name = "datasourcecubeview"
+				 Or vmy_var_name = "datasourcedimensionsubset"
+				 Or vmy_var_name = "datasourceusername"
+				 Or vmy_var_name = "datasourcepassword"
+				 Or vmy_var_name = "datasourcequery"
 				 Or vmy_var_name = "vmask"
 				 Or vmy_var_name = "vdec"
 				 Or vmy_var_name = "v1000" )
-					Continue
+				   	{
 
-				Lookup_VarType := ["2|'", "1|CellGetN", "2|CellGetS", "1|AttrN", "2|AttrS", "1|StringToNumber", "2|NumberToString", "2|SubsetGetElementName", "1|SubsetGetSize", "2|Trim", "2|Subst", "1|Scan", "1|ElparN", "2|Elpar", "1|ElIspar", "1|ElcompN", "2|ElComp", "1|ElIsComp", "2|Long", "1|Dimix", "1|Dimsiz", "2|Dimnm", "2|Dtype", "2|Expand", "2|Tabdim", "2|Delet", "2|Insrt", "2|Upper", "2|Lower", "2|Char", "2|DimensionElementPrincipalName", "2|GetProcessName", "2|TM1User", "2|Timst", "1|Dayno", "2|GetProcessErrorFileDirectory", "1|ExecuteProcess", "1|RunProcess" ]
-				Found := 0
-                for i, element in Lookup_VarType
-                {
-                   Element_Type := SubStr(element, 1, InStr(element, "|") - 1) 
-                   If( Element_Type == "1" )
-				      Element_Type_Full := "Number"
-                   Else
-                      Element_Type_Full := "Text"
+					   Found := 1
+				   	   LV_Add("", "Custom variable", my_var_name, "Text")
+                    }
 
-                   Element_Function := SubStr(element, InStr(element, "|") + 1)
-
-                   if( InStr(Text_of_vars_no_whitespace, e . my_var_name . "=" . Element_Function ) > 0 )
+				If( Found = 0 )
+				{
+                   for i, element in Lookup_VarType
+                   {
+                      Element_Type := SubStr(element, 1, InStr(element, "|") - 1) 
+                      If( Element_Type == "1" )
+				         Element_Type_Full := "Number"
+                      Else
+                         Element_Type_Full := "Text"
+				   
+                      Element_Function := SubStr(element, InStr(element, "|") + 1)
+				   
+                      if( InStr(Text_of_vars_no_whitespace, e . my_var_name . "=" . Element_Function ) > 0 )
                       {
-					     LV_Add("", "Custom variable", my_var_name, Element_Type_Full)
-					     Found := 1
-						 Break
-					  }
+				   	     Found := 1
+				   	     LV_Add("", "Custom variable", my_var_name, Element_Type_Full)
+					
+				   		 Break
+				   	  }
+                   }
                 }
 				
 				If( Found = 0 )
