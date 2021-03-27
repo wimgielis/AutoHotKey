@@ -1,6 +1,8 @@
 # AutoHotKey
 A set of tools written in the automation language AutoHotKey
 
+![06](https://user-images.githubusercontent.com/17201709/112705207-07b1c580-8e9e-11eb-8114-6b907becab4c.png)
+
 Download the exe file and store it anywhere you like.
 
 A set of tools can be started by pressing the F10 function key. A menu will appear.
