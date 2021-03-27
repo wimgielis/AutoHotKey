@@ -404,8 +404,10 @@ menuHandler:
 
 		Gui, Add, Button, gAO_SelectALL x15, Select all
 		Gui, Add, Button, gAO_ReloadVars x+30, Reload variables
-		Gui, Add, Button, gAO_RemoveDups x+100, Remove duplicates
+		Gui, Add, edit, vEdit_Select_Matching_Variables x+20 w80 r1 gSelect_Matching_Variables
+		Gui, Add, Button, gAO_RemoveDups x+55, Remove duplicates
 		Gui, Add, Button, gAO_ReIndex x+40, Re-index order
+		
 		Gui, Add, ListView, x10 w400 h500 gMyListView AltSubmit, Variable Type|Variable Name|Data Type|Order
 
 		Gui, Add, ListBox, 8 x+10 w150 r9 Choose1 vShow_Which_Variables gShow_Which_Variables, All|Parameters|Data source variables|Data source new variables|Custom variables|   in the Prolog tab|   in the Metadata tab|   in the Data tab|   in the Epilog tab
@@ -450,6 +452,20 @@ menuHandler:
 		    GuiControl,,Add_Area, 1
 		else
 		    GuiControl,,Add_Area, 0
+		return
+		
+        Select_Matching_Variables:
+		GuiControlGet, Edit_Select_Matching_Variables
+		If( Edit_Select_Matching_Variables != "" )
+		{
+            LV_Modify(0, "-Select")
+			Loop % LV_GetCount()
+            {
+                LV_GetText(Text, A_Index, 2)
+                if ( Instr( Text, Edit_Select_Matching_Variables ) > 0 )
+                    LV_Modify(A_Index, "+Select")
+            }
+        }	
 		return
 		
         MyListView:
