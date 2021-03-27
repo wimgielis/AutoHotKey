@@ -1,4 +1,4 @@
-﻿; ####################################################
+; ####################################################
 ; #
 ; # Author: Wim Gielis
 ; # Contact: wim.gielis@gmail.com
@@ -377,12 +377,13 @@ menuHandler:
 
 		; ####################################################
 		; # Purpose of the script:
-		; # - open up any (valid) PRO file in Notepad++
+		; # - open up any (valid) PRO file in Notepad++ or TI process editor, or just a snippet of TI code without a regular PRO file
 		; # - launch the menu and the gui
 		; # - list all variables of a TI process
 		; # - allow to generate the TI code for selected variables
 		; # - it will be pasted at the cursor
-		; # - several options are built-in
+		; # - Order of the selected (clicked) variables could be respected and AsciiOutput in that order
+		; # - several other options are built-in
 		; #
 		; # To be added later:
 		; # - Order of the selected variables could be respected and AsciiOutput in that order
@@ -403,23 +404,27 @@ menuHandler:
 
 		Gui, Add, Button, gAO_SelectALL x15, Select all
 		Gui, Add, Button, gAO_ReloadVars x+30, Reload variables
+		Gui, Add, Button, gAO_RemoveDups x+100, Remove duplicates
+		Gui, Add, Button, gAO_ReIndex x+40, Re-index order
 		Gui, Add, ListView, x10 w400 h500 gMyListView AltSubmit, Variable Type|Variable Name|Data Type|Order
-        LV_ModifyCol(4, "Integer")
+
 		Gui, Add, ListBox, 8 x+10 w150 r9 Choose1 vShow_Which_Variables gShow_Which_Variables, All|Parameters|Data source variables|Data source new variables|Custom variables|   in the Prolog tab|   in the Metadata tab|   in the Data tab|   in the Epilog tab
 		Gui, Add, ListBox, AltSubmit ReadOnly y+30 w150 r3 vSwitch_Text_Number gSwitch_Text_Number, Text <--> Number|--> Text|--> Number
 		Gui, Add, Button, gAO_OK y+40, Generate output
 
-		Gui, Add, ListBox, x10 w100 Choose1 vMyListBox_OutputFunction, AsciiOutput|TextOutput
-		Gui, Add, ListBox, AltSubmit x+20 w100 Choose1 vMyListBox_OutputFolder, DataDir|LoggingDir
+		Gui, Add, ListBox, x10 w100 Choose1 vMyListBox_OutputFunction, AsciiOutput|TextOutput|LogOutput
+		Gui, Add, ListBox, AltSubmit x+20 w100 Choose1 vMyListBox_OutputFolder, DataDir|LoggingDir|DebugDir
 		Gui, Add, edit, vEdi1 x+20 w160 r1, test.txt
 		Gui, Add, CheckBox, y+10 vVariable_Filename, Variable
 
         Gui, Add, CheckBox, x10 y+15 Checked vOutput_in_Selected_Order gOutput_in_Selected_Order, Output variables in selected order
         Gui, Add, CheckBox, x10 vAdd_Output_Settings, Add output settings
-        Gui, Add, CheckBox, x10 vNumbers_NumberFormat, Numbers get a numberformat
+																				 
 
         Gui, Add, CheckBox, x10 vNames_of_variables, Insert names of variables
         Gui, Add, CheckBox, x10 vHeader, Add code for a header
+        Gui, Add, CheckBox, x10 vNumbers_NumberFormat, Numbers get a numberformat
+		Gui, Add, CheckBox, x25 y+5 vNumberToString_Enough, NumberToString suffices
 
 		Gui, Add, ListBox, AltSubmit Choose1 x10 y+15 w150 r3 vLine_Splitter, No split|Multiline output|Split long lines
 
@@ -428,15 +433,26 @@ menuHandler:
 		Gui, Add, Text, x+5 yp+3, Add this many filters
 
 		Gui, Add, Edit, x250 y685 w50 Center
-		Gui, Add, UpDown, Left vUpDown_Repeat Range0-20, 1
+		Gui, Add, UpDown, Left vUpDown_Repeat gUpDown_Repeat Range1-20, 1
 		Gui, Add, Text, x+5 yp+3, Repeat output this many times
+        Gui, Add, CheckBox, yp+20 vAdd_Area, Include area designation
 
         Gosub Read_in_AO_vars
 
 		LV_ModifyCol()  ; Auto-size each column to fit its contents
+        LV_ModifyCol(4, "45 Integer Center")
 		Gui, Show, w600 h850, Output variables to a text file                                                         (c) 2021 - Wim Gielis
 
         return
+
+        UpDown_Repeat:
+        gui, Submit, noHide
+		If UpDown_Repeat > 1
+		    GuiControl,,Add_Area, 1
+		else
+		    GuiControl,,Add_Area, 0
+        
+		return
 		
         MyListView:
         gui, Submit, noHide
@@ -488,7 +504,12 @@ menuHandler:
 		   }
 								  
         }
-        return
+		if ( A_GuiEvent = "RightClick" )
+        {
+		    ; clear the order for the selected row
+		    LV_Modify(A_EventInfo, "Col4", "")
+		}
+		return
 
 		Show_Which_Variables:
 		gosub Read_in_AO_vars
@@ -657,10 +678,10 @@ menuHandler:
 			if ( sFullFilename = "No PRO file" )
 			{
 				Text_of_vars_1234 := FileContents
-				Text_of_vars_1    := 
-				Text_of_vars_2    := 
-				Text_of_vars_3    := 
-				Text_of_vars_4    := 
+				Text_of_vars_1    :=
+				Text_of_vars_2    :=
+				Text_of_vars_3    :=
+				Text_of_vars_4    :=
 			}
 			else
 			{
@@ -688,14 +709,12 @@ menuHandler:
 			out := ""
 			Pos = 1
 			While Pos := RegExMatch(Text_of_vars, "(?<=\v)\s*?\w+?\s*?=", m, Pos+StrLen(m))
-			; While Pos := RegExMatch(Text_of_vars, "m)^\s*?\w+?\s*?=", m, Pos+StrLen(m))
-			; While Pos := RegExMatch(Text_of_vars, "\v\s*?\w+?\s*?=", m, Pos+StrLen(m)) ; somewhat more whitespace in output (see my AHK forum thread)
-			   {
+			{
 			   m := StrReplace(m, "=", "")
 			   m := StrReplace(m, A_Space, "")
 			   m := StrReplace(m, "`r`n", "")
 			   allMatches .= (!allMatches ? "" : "`n") m
-			   }
+			}
 
 			Loop, parse, allMatches, `n
 			If not RegExMatch(out, "\b" A_LoopField "\b") {
@@ -703,6 +722,10 @@ menuHandler:
 				out .= A_LoopField
 			}
 
+			; to ease searching for the variable name in the code, then retrieve the following word/characters
+			Text_of_vars_no_whitespace := StrReplace(Text_of_vars, A_Space)
+			Text_of_vars_no_whitespace := StrReplace(Text_of_vars_no_whitespace, A_Tab)
+			e := "`r`n"
 			VarArray := StrSplit(out, "`n")
 			Loop % VarArray.MaxIndex()
 			{
@@ -719,14 +742,57 @@ menuHandler:
 				 Or vmy_var_name = "v1000" )
 					Continue
 
-				vFirst_Letter := Substr( my_var_name, 1, 1 )
-				StringLower, vFirst_Letter, vFirst_Letter
-				if( vFirst_Letter = "n" )
-					LV_Add("", "Custom variable", my_var_name, "Number")
-				else if( vFirst_Letter = "s" )
-					LV_Add("", "Custom variable", my_var_name, "Text")
-				else
+				Lookup_VarType := ["2|'", "1|CellGetN", "2|CellGetS", "1|AttrN", "2|AttrS", "1|StringToNumber", "2|NumberToString", "2|SubsetGetElementName", "1|SubsetGetSize", "2|Trim", "2|Subst", "1|Scan", "1|ElparN", "2|Elpar", "1|ElIspar", "1|ElcompN", "2|ElComp", "1|ElIsComp", "2|Long", "1|Dimix", "1|Dimsiz", "2|Dimnm", "2|Dtype", "2|Expand", "2|Tabdim", "2|Delet", "2|Insrt", "2|Upper", "2|Lower", "2|Char", "2|DimensionElementPrincipalName", "2|GetProcessErrorFileDirectory", "1|ExecuteProcess", "1|RunProcess" ]
+				Found := 0
+                for i, element in Lookup_VarType
+                {
+                   Element_Type := SubStr(element, 1, InStr(element, "|") - 1) 
+                   If( Element_Type == "1" )
+				      Element_Type_Full := "Number"
+                   Else
+                      Element_Type_Full := "Text"
+
+                   Element_Function := SubStr(element, InStr(element, "|") + 1)
+
+                   if( InStr(Text_of_vars_no_whitespace, e . my_var_name . "=" . Element_Function ) > 0 )
+                      {
+					     LV_Add("", "Custom variable", my_var_name, Element_Type_Full)
+					     Found := 1
+						 Break
+					  }
+                }
+				
+				If( Found = 0 )
+				{
+				   Needle := e . my_var_name . "="
+				   FoundPos := InStr(Text_of_vars_no_whitespace, Needle )
+				   Following_Character := SubStr(Text_of_vars_no_whitespace, FoundPos + StrLen(Needle), 1)
+				   if Following_Character Is Integer
+                   {
+                      Found := 1
+                      LV_Add("", "Custom variable", my_var_name, "Number")
+                   }
+				}
+				
+				If( Found = 0 )
+				{
+				   vFirst_Letter := Substr( my_var_name, 1, 1 )
+                   StringLower, vFirst_Letter, vFirst_Letter
+                   if( vFirst_Letter = "n" )
+                   {
+                      Found := 1
+                      LV_Add("", "Custom variable", my_var_name, "Number")
+                   }
+                   else if( vFirst_Letter = "s" )
+                   {
+                      Found := 1
+                      LV_Add("", "Custom variable", my_var_name, "Text")
+                   }
+				}
+
+				If( Found = 0 )
 					LV_Add("", "Custom variable", my_var_name, "Text/Number")
+
 			}
 		}
 		return
@@ -740,8 +806,51 @@ menuHandler:
 		    Loop % LV_GetCount()
                 LV_Modify(A_Index, "Col4", "")
         }
-		return
+        AO_ReIndex:
+		; 1. read the order numbers and row numbers in an associative array
+        oArray := {}
+		Loop % LV_GetCount()
+		{
+           LV_GetText(my_order, A_Index, 4)
+		   if ( my_order != "" )
+              oArray[A_Index] := my_order
+		}
 
+		; 2. sort the array on the order numbers
+        temp := {}
+        for key, val in oArray
+           temp[val] ? temp[val].Insert(key) : temp[val] := [key]
+		
+		; 3. loop over the sorted array and populate the order for the row number in ascending manner
+		c := 0
+        for i, x in temp
+           for k, y in x
+		   {
+		      ; msgbox %i% - %k% - %y%
+		      c += 1
+              LV_Modify(y, "Col4", c)
+           }
+
+		return
+		
+		AO_RemoveDups:
+		ControlList := "|"
+		DupesList := 
+		Loop % LV_GetCount()
+		{
+		  LV_GetText(RowText, A_Index, 2)
+		  IfInString, ControlList, |%RowText%|
+			DupesList = %A_Index%|%DupesList%
+		  else
+			ControlList = |%RowText%%ControlList%
+		}
+		; DupesList .= A_Index . "|"
+        Loop, parse, DupesList, |
+        {
+           If A_LoopField is integer
+              LV_Delete(A_LoopField)
+        }	
+		return
 		AO_SelectALL:
 		Gui, Submit, NoHide
 		LV_Modify(0, "Select")
@@ -817,9 +926,12 @@ menuHandler:
 		If ( Variable_Filename = True )
 		    {
 			sOutput .= "vFile = "
-			If MyListBox_OutputFolder = 2
-				sOutput .= "GetProcessErrorFileDirectory | "
-			sOutput .= "'" . Edi1 . "';" . e
+			if MyListBox_OutputFolder = 1
+					sOutput .= "'" . Edi1 . "';" . e
+			else if MyListBox_OutputFolder = 2
+				sOutput .= "GetProcessErrorFileDirectory | " . "'" . Edi1 . "';" . e
+			else if MyListBox_OutputFolder = 3
+				sOutput .= "'..\Debug\" . Edi1 . "';" . e
 			}
 
 		; output with settings
@@ -833,25 +945,35 @@ menuHandler:
 
 		; output with numberformat
 		If ( Numbers_NumberFormat = True )
+			If (  NumberToString_Enough = False )
 		    {
-			sOutput .= "vMask = '#,0.##';" . e
-			sOutput .= "vDec = ',';" . e
-			sOutput .= "v1000 = '.';" . e
+				sOutput .= "vMask = '#,0.##';" . e
+				sOutput .= "vDec = ',';" . e
+				sOutput .= "v1000 = '.';" . e
 			}
 
 		; output with header
 		If ( Header = True )
-			{
+		{
 			sOutput .= "vCounter = 1;" . e
 			sOutput .= "If( vCounter = 1 );" . e
-			sOutput .= MyListBox_OutputFunction . "( "
-			If ( Variable_Filename = True )
-				sOutput .= "vFile"
-		    Else
+			
+			If ( MyListBox_OutputFunction = "LogOutput" )
+				sOutput .= MyListBox_OutputFunction . "( 'INFO'"
+			else
 			{
-				If MyListBox_OutputFolder = 2
-					sOutput .= " GetProcessErrorFileDirectory | "
-				sOutput .= "'" . Edi1 . "'"
+				sOutput .= MyListBox_OutputFunction . "( "
+				If ( Variable_Filename = True )
+					sOutput .= "vFile"
+				Else
+				{
+					if MyListBox_OutputFolder = 1
+						sOutput .= "'" . Edi1 . "'"
+					else if MyListBox_OutputFolder = 2
+						sOutput .= " GetProcessErrorFileDirectory | " . "'" . Edi1 . "'"
+					else if MyListBox_OutputFolder = 3
+						sOutput .= "'..\Debug\" . Edi1 . "'"
+				}
 			}
 
 			if ( Output_in_Selected_Order = True )
@@ -888,7 +1010,7 @@ menuHandler:
 			sOutput .= " );" . e
 			sOutput .= "EndIf;" . e
 			sOutput .= "vCounter = vCounter + 1;" . e . e
-			}
+		}
 
 		; output with run time values
 		Loop % UpDown_Repeat
@@ -896,21 +1018,34 @@ menuHandler:
 			sOutput .= e
 			Loop % UpDown_IF
 				sOutput .= e . "If(  @= '' );"
-
-			sOutput .= e . MyListBox_OutputFunction . "( "
-
-			If ( Variable_Filename = True )
-				sOutput .= "vFile"
-		    Else
+			
+			If ( MyListBox_OutputFunction = "LogOutput" )
+				sOutput .= MyListBox_OutputFunction . "( 'INFO'"
+			else
+					  
+		  
 			{
-				If MyListBox_OutputFolder = 2
-					sOutput .= " GetProcessErrorFileDirectory | "
-				sOutput .= "'" . Edi1 . "'"
+				sOutput .= e . MyListBox_OutputFunction . "( "
+
+				If ( Variable_Filename = True )
+					sOutput .= "vFile"
+				Else
+				{
+					if MyListBox_OutputFolder = 1
+						sOutput .= "'" . Edi1 . "'"
+					else if MyListBox_OutputFolder = 2
+						sOutput .= " GetProcessErrorFileDirectory | " . "'" . Edi1 . "'"
+					else if MyListBox_OutputFolder = 3
+						sOutput .= "'..\Debug\" . Edi1 . "'"
+				}
 			}
+
+			if ( Add_Area = True )
+                   sOutput .= ", 'AREA_" . A_Index . "'"		       
 
 			if ( Output_in_Selected_Order = True )
             {
-		       LV_ModifyCol(4, "Sort")
+			   LV_ModifyCol(4, "Sort")
 			   Loop % LV_GetCount()
                {
                    LV_GetText(Text, A_Index, 4)
@@ -924,7 +1059,7 @@ menuHandler:
                         {
                             If ( Var_Type = "Number" )
                             {
-                                If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
+                                If ( Numbers_NumberFormat = False Or NumberToString_Enough = True Or vVar_Name = "value_is_string" )
                                     sOutput .= Add_Text(sOutput, ", NumberToString( " . Var_Name . " )", m)
                                 Else
                                     sOutput .= Add_Text(sOutput, ", NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
@@ -936,7 +1071,7 @@ menuHandler:
                         {
                             If ( Var_Type = "Number" )
                             {
-                                If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
+                                If ( Numbers_NumberFormat = False Or NumberToString_Enough = True Or vVar_Name = "value_is_string" )
                                     sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToString( " . Var_Name . " )", m)
                                 Else
                                     sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
@@ -963,7 +1098,7 @@ menuHandler:
                     {
                         If ( Var_Type = "Number" )
                         {
-                            If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
+                            If ( Numbers_NumberFormat = False Or NumberToString_Enough = True Or vVar_Name = "value_is_string" )
                                 sOutput .= Add_Text(sOutput, ", NumberToString( " . Var_Name . " )", m)
                             Else
                                 sOutput .= Add_Text(sOutput, ", NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
@@ -975,7 +1110,7 @@ menuHandler:
                     {
                         If ( Var_Type = "Number" )
                         {
-                            If ( Numbers_NumberFormat = False Or vVar_Name = "value_is_string" )
+                            If ( Numbers_NumberFormat = False Or NumberToString_Enough = True Or vVar_Name = "value_is_string" )
                                 sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToString( " . Var_Name . " )", m)
                             Else
                                 sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
