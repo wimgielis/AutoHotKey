@@ -1,7 +1,7 @@
 # AutoHotKey
 A set of tools written in the automation language AutoHotKey
 
-![06](https://user-images.githubusercontent.com/17201709/112705207-07b1c580-8e9e-11eb-8114-6b907becab4c.png)
+![07](https://user-images.githubusercontent.com/17201709/112705582-db974400-8e9f-11eb-9001-26cbb3ff11d9.png)
 
 Download the exe file and store it anywhere you like.
 
