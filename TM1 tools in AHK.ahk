@@ -442,7 +442,6 @@ menuHandler:
 		LV_ModifyCol()  ; Auto-size each column to fit its contents
         LV_ModifyCol(4, "45 Integer Center")
 		Gui, Show, w600 h850, Output variables to a text file                                                         (c) 2021 - Wim Gielis
-
         return
 
         UpDown_Repeat:
@@ -451,7 +450,6 @@ menuHandler:
 		    GuiControl,,Add_Area, 1
 		else
 		    GuiControl,,Add_Area, 0
-        
 		return
 		
         MyListView:
@@ -502,7 +500,7 @@ menuHandler:
                    }
                }
 		   }
-								  
+
         }
 		if ( A_GuiEvent = "RightClick" )
         {
@@ -534,6 +532,13 @@ menuHandler:
 		else
 		    FileRead, FileContents, %sFullFilename%
 
+
+		; make sure we have CRLF as the end of line character
+        If ( Instr( FileContents, "`r`n" ) = 0 )
+           If ( Instr( FileContents, "`n" ) > 0 )
+		      FileContents := StrReplace(FileContents, "`n", "`r`n")
+           else if ( Instr( FileContents, "`r" ) > 0 )
+		      FileContents := StrReplace(FileContents, "`r", "`r`n")
 
 		; 1. parameters
 		if InStr( Show_Which_Variables, "All", false ) = 1
@@ -742,7 +747,7 @@ menuHandler:
 				 Or vmy_var_name = "v1000" )
 					Continue
 
-				Lookup_VarType := ["2|'", "1|CellGetN", "2|CellGetS", "1|AttrN", "2|AttrS", "1|StringToNumber", "2|NumberToString", "2|SubsetGetElementName", "1|SubsetGetSize", "2|Trim", "2|Subst", "1|Scan", "1|ElparN", "2|Elpar", "1|ElIspar", "1|ElcompN", "2|ElComp", "1|ElIsComp", "2|Long", "1|Dimix", "1|Dimsiz", "2|Dimnm", "2|Dtype", "2|Expand", "2|Tabdim", "2|Delet", "2|Insrt", "2|Upper", "2|Lower", "2|Char", "2|DimensionElementPrincipalName", "2|GetProcessErrorFileDirectory", "1|ExecuteProcess", "1|RunProcess" ]
+				Lookup_VarType := ["2|'", "1|CellGetN", "2|CellGetS", "1|AttrN", "2|AttrS", "1|StringToNumber", "2|NumberToString", "2|SubsetGetElementName", "1|SubsetGetSize", "2|Trim", "2|Subst", "1|Scan", "1|ElparN", "2|Elpar", "1|ElIspar", "1|ElcompN", "2|ElComp", "1|ElIsComp", "2|Long", "1|Dimix", "1|Dimsiz", "2|Dimnm", "2|Dtype", "2|Expand", "2|Tabdim", "2|Delet", "2|Insrt", "2|Upper", "2|Lower", "2|Char", "2|DimensionElementPrincipalName", "2|GetProcessName", "2|TM1User", "2|Timst", "1|Dayno", "2|GetProcessErrorFileDirectory", "1|ExecuteProcess", "1|RunProcess" ]
 				Found := 0
                 for i, element in Lookup_VarType
                 {
