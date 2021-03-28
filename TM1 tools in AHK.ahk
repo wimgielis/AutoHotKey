@@ -390,45 +390,51 @@ menuHandler:
 		; # - A tab control on the gui containing a 'live' preview of what the code would create (with manual adjustment)
 		; # - Use the Windows registry to save to and load from for choices in the gui (not needed to redo everything)
 		; # - No REST API used and needed for now, I parse a text file and that's it
-		; # - 
+		; # -
 		; ####################################################
 
 
+        inifile = GAO_settings.ini
 		vProcess := Get_Process_FullFileName( "", "___Current process" )
 		if vProcess =
 		   vProcess := "No PRO file"
 
 		Gui, Destroy
 
-		Gui, Add, Text, vFullFilename Disabled, %vProcess%
+		Gui, Add, Text, x20 vFullFilename Disabled, %vProcess%
 
-		Gui, Add, Button, gAO_SelectALL x15, Select all
+		Gui, Add, Button, gAO_SelectALL x20, Select all
 		Gui, Add, Button, gAO_ReloadVars x+30, Reload variables
-		Gui, Add, edit, vEdit_Select_Matching_Variables x+20 w80 r1 gSelect_Matching_Variables
+		Gui, Add, Edit, vEdit_Select_Matching_Variables x+20 w80 r1 gSelect_Matching_Variables
 		Gui, Add, Button, gAO_RemoveDups x+55, Remove duplicates
-		Gui, Add, Button, gAO_ReIndex x+40, Re-index order
-		
-		Gui, Add, ListView, x10 w400 h500 gMyListView AltSubmit, Variable Type|Variable Name|Data Type|Order
+		Gui, Add, Button, gAO_ReIndex x+45, Re-index order
+
+		Gui, Add, ListView, x20 w400 h505 gMyListView AltSubmit, Variable Type|Variable Name|Data Type|Order
 
 		Gui, Add, ListBox, 8 x+10 w150 r9 Choose1 vShow_Which_Variables gShow_Which_Variables, All|Parameters|Data source variables|Data source new variables|Custom variables|   in the Prolog tab|   in the Metadata tab|   in the Data tab|   in the Epilog tab
 		Gui, Add, ListBox, AltSubmit ReadOnly y+30 w150 r3 vSwitch_Text_Number gSwitch_Text_Number, Text <--> Number|--> Text|--> Number
-		Gui, Add, Button, gAO_OK y+40, Generate output
+		Gui, Add, Button, gAO_OK y+45 w150, Generate output
 
-		Gui, Add, ListBox, x10 w100 Choose1 vMyListBox_OutputFunction, AsciiOutput|TextOutput|LogOutput
+		Gui, Add, Button, y+120 w150 vDefaultSettings gDefaultSettings, Use default settings
+		Gui, Add, Button, y+15  w150 vLoadSettings gLoadSettings, Load settings from file
+		Gui, Add, Button, y+8   w150 vSaveSettings gSaveSettings, Save settings to file
+		Gui, Add, Button, y+8   w150 vDeleteSettings gDeleteSettings, Delete settings file
+
+		Gui, Add, ListBox, x20 y+25 w100 Choose1 vMyListBox_OutputFunction, AsciiOutput|TextOutput|LogOutput
 		Gui, Add, ListBox, AltSubmit x+20 w100 Choose1 vMyListBox_OutputFolder, DataDir|LoggingDir|DebugDir
-		Gui, Add, edit, vEdi1 x+20 w160 r1, test.txt
-		Gui, Add, CheckBox, y+10 vVariable_Filename, Variable
+		Gui, Add, Edit, vEdi1 x+20 w160 r1, test.txt
+		Gui, Add, CheckBox, y+10 Checked vVariable_Filename, Variable
 
-        Gui, Add, CheckBox, x10 y+15 Checked vOutput_in_Selected_Order gOutput_in_Selected_Order, Output variables in selected order
-        Gui, Add, CheckBox, x10 vAdd_Output_Settings, Add output settings
-																				 
+        Gui, Add, CheckBox, x20 y+25 Checked vOutput_in_Selected_Order gOutput_in_Selected_Order, Output variables in selected order
+        Gui, Add, CheckBox, x20 vAdd_Output_Settings, Add output settings
 
-        Gui, Add, CheckBox, x10 vNames_of_variables, Insert names of variables
-        Gui, Add, CheckBox, x10 vHeader, Add code for a header
-        Gui, Add, CheckBox, x10 vNumbers_NumberFormat, Numbers get a numberformat
-		Gui, Add, CheckBox, x25 y+5 vNumberToString_Enough, NumberToString suffices
 
-		Gui, Add, ListBox, AltSubmit Choose1 x10 y+15 w150 r3 vLine_Splitter, No split|Multiline output|Split long lines
+        Gui, Add, CheckBox, x20 vNames_of_variables, Insert names of variables
+        Gui, Add, CheckBox, x20 vHeader, Add code for a header
+        Gui, Add, CheckBox, x20 vNumbers_NumberFormat, Numbers get a numberformat
+
+
+		Gui, Add, ListBox, AltSubmit Choose1 x20 y+25 w150 r3 vLine_Splitter, No split|Multiline output|Split long lines
 
 		Gui, Add, Edit, x250 y650 w50 Center
 		Gui, Add, UpDown, Left vUpDown_IF Range0-10, 0
@@ -442,8 +448,85 @@ menuHandler:
         Gosub Read_in_AO_vars
 
 		LV_ModifyCol()  ; Auto-size each column to fit its contents
-        LV_ModifyCol(4, "45 Integer Center")
-		Gui, Show, w600 h850, Output variables to a text file                                                         (c) 2021 - Wim Gielis
+		LV_ModifyCol(4, "45 Integer Center")
+		vCaption := "Output variables to a text file                                                       (c) Wim Gielis - " . A_Year
+		Gui, Show, w600 h835, %vCaption%
+        return
+
+        DefaultSettings:
+        GuiControl, Choose, MyListBox_OutputFunction, 1
+        GuiControl, Choose, MyListBox_OutputFolder, 1
+        GuiControl, , Edi1, test.txt
+        GuiControl, , Variable_Filename, 1
+        GuiControl, , Output_in_Selected_Order, 1
+        GuiControl, , Add_Output_Settings, 0
+        GuiControl, , Names_of_variables, 0
+        GuiControl, , Header, 0
+        GuiControl, , Numbers_NumberFormat, 0
+		GuiControl, Choose, Line_Splitter, 1
+        GuiControl, , UpDown_IF, 0
+        GuiControl, , UpDown_Repeat, 1
+        GuiControl, , Add_Area, 0
+		return
+
+        LoadSettings:
+        IfNotExist, %inifile%
+        {
+		   Msgbox No settings file (%A_ScriptDir%\%inifile%) could be found.
+		   Return
+		}
+        IniRead, MyListBox_OutputFunction, %inifile%, Generate_AsciiOutput, MyListBox_OutputFunction
+           GuiControl, Choose, MyListBox_OutputFunction, %MyListBox_OutputFunction%
+        IniRead, MyListBox_OutputFolder  , %inifile%, Generate_AsciiOutput, MyListBox_OutputFolder
+           GuiControl, Choose, MyListBox_OutputFolder, %MyListBox_OutputFolder%
+        IniRead, Edi1                    , %inifile%, Generate_AsciiOutput, Edi1
+           GuiControl, , Edi1, %Edi1%
+        IniRead, Variable_Filename       , %inifile%, Generate_AsciiOutput, Variable_Filename
+           GuiControl,,Variable_Filename, %Variable_Filename%
+        IniRead, Output_in_Selected_Order, %inifile%, Generate_AsciiOutput, Output_in_Selected_Order
+           GuiControl,,Output_in_Selected_Order, %Output_in_Selected_Order%
+        IniRead, Add_Output_Settings     , %inifile%, Generate_AsciiOutput, Add_Output_Settings
+           GuiControl,,Add_Output_Settings, %Add_Output_Settings%
+        IniRead, Names_of_variables      , %inifile%, Generate_AsciiOutput, Names_of_variables
+           GuiControl,,Names_of_variables, %Names_of_variables%
+        IniRead, Header                  , %inifile%, Generate_AsciiOutput, Header
+           GuiControl,,Header, %Header%
+        IniRead, Numbers_NumberFormat    , %inifile%, Generate_AsciiOutput, Numbers_NumberFormat
+           GuiControl,,Numbers_NumberFormat, %Numbers_NumberFormat%
+        IniRead, Line_Splitter           , %inifile%, Generate_AsciiOutput, Line_Splitter
+           GuiControl, Choose, Line_Splitter, %Line_Splitter%
+        IniRead, UpDown_IF               , %inifile%, Generate_AsciiOutput, UpDown_IF
+           GuiControl, , UpDown_IF, %UpDown_IF%
+        IniRead, UpDown_Repeat           , %inifile%, Generate_AsciiOutput, UpDown_Repeat
+           GuiControl, , UpDown_Repeat, %UpDown_Repeat%
+        IniRead, Add_Area                , %inifile%, Generate_AsciiOutput, Add_Area
+           GuiControl,,Add_Area, %Add_Area%
+        return
+
+        SaveSettings:
+        Gui, Submit, noHide
+        IniWrite, %MyListBox_OutputFunction%, %inifile%, Generate_AsciiOutput, MyListBox_OutputFunction
+        IniWrite, %MyListBox_OutputFolder%  , %inifile%, Generate_AsciiOutput, MyListBox_OutputFolder
+        IniWrite, %Edi1%                    , %inifile%, Generate_AsciiOutput, Edi1
+        IniWrite, %Variable_Filename%       , %inifile%, Generate_AsciiOutput, Variable_Filename
+        IniWrite, %Output_in_Selected_Order%, %inifile%, Generate_AsciiOutput, Output_in_Selected_Order
+        IniWrite, %Add_Output_Settings%     , %inifile%, Generate_AsciiOutput, Add_Output_Settings
+        IniWrite, %Names_of_variables%      , %inifile%, Generate_AsciiOutput, Names_of_variables
+        IniWrite, %Header%                  , %inifile%, Generate_AsciiOutput, Header
+        IniWrite, %Numbers_NumberFormat%    , %inifile%, Generate_AsciiOutput, Numbers_NumberFormat
+        IniWrite, %Line_Splitter%           , %inifile%, Generate_AsciiOutput, Line_Splitter
+        IniWrite, %UpDown_IF%               , %inifile%, Generate_AsciiOutput, UpDown_IF
+        IniWrite, %UpDown_Repeat%           , %inifile%, Generate_AsciiOutput, UpDown_Repeat
+        IniWrite, %Add_Area%                , %inifile%, Generate_AsciiOutput, Add_Area
+        return
+
+        DeleteSettings:
+        IfNotExist, %inifile%
+        {
+		   Msgbox No settings file (%A_ScriptDir%\%inifile%) could be found.
+		   Return
+		}
+        FileDelete, %inifile%
         return
 
         UpDown_Repeat:
@@ -453,7 +536,7 @@ menuHandler:
 		else
 		    GuiControl,,Add_Area, 0
 		return
-		
+
         Select_Matching_Variables:
 		GuiControlGet, Edit_Select_Matching_Variables
 		If( Edit_Select_Matching_Variables != "" )
@@ -465,9 +548,9 @@ menuHandler:
                 if ( Instr( Text, Edit_Select_Matching_Variables ) > 0 )
                     LV_Modify(A_Index, "+Select")
             }
-        }	
+        }
 		return
-		
+
         MyListView:
         gui, Submit, noHide
 		if ( A_GuiEvent = "Normal" )
@@ -785,24 +868,24 @@ menuHandler:
 				{
                    for i, element in Lookup_VarType
                    {
-                      Element_Type := SubStr(element, 1, InStr(element, "|") - 1) 
+                      Element_Type := SubStr(element, 1, InStr(element, "|") - 1)
                       If( Element_Type == "1" )
 				         Element_Type_Full := "Number"
                       Else
                          Element_Type_Full := "Text"
-				   
+
                       Element_Function := SubStr(element, InStr(element, "|") + 1)
-				   
+
                       if( InStr(Text_of_vars_no_whitespace, e . my_var_name . "=" . Element_Function ) > 0 )
                       {
 				   	     Found := 1
 				   	     LV_Add("", "Custom variable", my_var_name, Element_Type_Full)
-					
+
 				   		 Break
 				   	  }
                    }
                 }
-				
+
 				If( Found = 0 )
 				{
 				   Needle := e . my_var_name . "="
@@ -814,7 +897,7 @@ menuHandler:
                       LV_Add("", "Custom variable", my_var_name, "Number")
                    }
 				}
-				
+
 				If( Found = 0 )
 				{
 				   vFirst_Letter := Substr( my_var_name, 1, 1 )
@@ -839,7 +922,7 @@ menuHandler:
 		return
 
 		Output_in_Selected_Order:
-		Gui, Submit, NoHide		
+		Gui, Submit, NoHide
 		if ( Output_in_Selected_Order = True )
         {}
 		else
@@ -861,7 +944,7 @@ menuHandler:
         temp := {}
         for key, val in oArray
            temp[val] ? temp[val].Insert(key) : temp[val] := [key]
-		
+
 		; 3. loop over the sorted array and populate the order for the row number in ascending manner
 		c := 0
         for i, x in temp
@@ -873,10 +956,10 @@ menuHandler:
            }
 
 		return
-		
+
 		AO_RemoveDups:
 		ControlList := "|"
-		DupesList := 
+		DupesList :=
 		Loop % LV_GetCount()
 		{
 		  LV_GetText(RowText, A_Index, 2)
@@ -890,7 +973,7 @@ menuHandler:
         {
            If A_LoopField is integer
               LV_Delete(A_LoopField)
-        }	
+        }
 		return
 		AO_SelectALL:
 		Gui, Submit, NoHide
@@ -998,7 +1081,7 @@ menuHandler:
 		{
 			sOutput .= "vCounter = 1;" . e
 			sOutput .= "If( vCounter = 1 );" . e
-			
+
 			If ( MyListBox_OutputFunction = "LogOutput" )
 				sOutput .= MyListBox_OutputFunction . "( 'INFO'"
 			else
@@ -1059,12 +1142,12 @@ menuHandler:
 			sOutput .= e
 			Loop % UpDown_IF
 				sOutput .= e . "If(  @= '' );"
-			
+
 			If ( MyListBox_OutputFunction = "LogOutput" )
 				sOutput .= MyListBox_OutputFunction . "( 'INFO'"
 			else
-					  
-		  
+
+
 			{
 				sOutput .= e . MyListBox_OutputFunction . "( "
 
@@ -1082,7 +1165,7 @@ menuHandler:
 			}
 
 			if ( Add_Area = True )
-                   sOutput .= ", 'AREA_" . A_Index . "'"		       
+                   sOutput .= ", 'AREA_" . A_Index . "'"
 
 			if ( Output_in_Selected_Order = True )
             {
@@ -1095,12 +1178,12 @@ menuHandler:
                         LV_GetText(Var_Name, A_Index, 2)
                         LV_GetText(Var_Type, A_Index, 3)
                         StringLower, vVar_Name, Var_Name
-                        
+
                         If ( Names_of_variables = False )
                         {
                             If ( Var_Type = "Number" )
                             {
-                                If ( Numbers_NumberFormat = False Or NumberToString_Enough = True Or vVar_Name = "value_is_string" )
+                                If ( Numbers_NumberFormat = False Or vVar_Name = "nvalue" Or vVar_Name = "value_is_string" )
                                     sOutput .= Add_Text(sOutput, ", NumberToString( " . Var_Name . " )", m)
                                 Else
                                     sOutput .= Add_Text(sOutput, ", NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
@@ -1112,7 +1195,7 @@ menuHandler:
                         {
                             If ( Var_Type = "Number" )
                             {
-                                If ( Numbers_NumberFormat = False Or NumberToString_Enough = True Or vVar_Name = "value_is_string" )
+                                If ( Numbers_NumberFormat = False Or vVar_Name = "nvalue" Or vVar_Name = "value_is_string" )
                                     sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToString( " . Var_Name . " )", m)
                                 Else
                                     sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
@@ -1134,12 +1217,12 @@ menuHandler:
                     LV_GetText(Var_Name, RowNumber, 2)
                     LV_GetText(Var_Type, RowNumber, 3)
                     StringLower, vVar_Name, Var_Name
-                    
+
                     If ( Names_of_variables = False )
                     {
                         If ( Var_Type = "Number" )
                         {
-                            If ( Numbers_NumberFormat = False Or NumberToString_Enough = True Or vVar_Name = "value_is_string" )
+                            If ( Numbers_NumberFormat = False Or vVar_Name = "nvalue" Or vVar_Name = "value_is_string" )
                                 sOutput .= Add_Text(sOutput, ", NumberToString( " . Var_Name . " )", m)
                             Else
                                 sOutput .= Add_Text(sOutput, ", NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
@@ -1151,7 +1234,7 @@ menuHandler:
                     {
                         If ( Var_Type = "Number" )
                         {
-                            If ( Numbers_NumberFormat = False Or NumberToString_Enough = True Or vVar_Name = "value_is_string" )
+                            If ( Numbers_NumberFormat = False Or vVar_Name = "nvalue" Or vVar_Name = "value_is_string" )
                                 sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToString( " . Var_Name . " )", m)
                             Else
                                 sOutput .= Add_Text(sOutput, ", '" . Var_Name . ": ', " . "NumberToStringEx( " . Var_Name . ", vMask, vDec, v1000 )", m)
@@ -1181,7 +1264,7 @@ menuHandler:
     }
     else if(menuItem = "File backup with timestamp")
     {
-	
+
 		; ####################################################
 		; # Purpose of the script:
 		; - automatically backup with a timestamp what you are working on
@@ -1198,7 +1281,7 @@ menuHandler:
 		FormatTime, suffix,, (yyyy-MM-dd HHmmss)
 		; suffix := " (" a_YYYY "-" a_MM "-" a_DD " " a_Hour a_Min a_Sec ")"
 
-		vFile_New = 
+		vFile_New =
 
 		if InStr( Window_Title, "Turbo Integrator:", false ) = 1
 		   {
