@@ -1,7 +1,7 @@
 # AutoHotKey
 A set of tools written in the automation language AutoHotKey
 
-![06](https://user-images.githubusercontent.com/17201709/112707434-b577a100-8eab-11eb-9d4d-55bbbbc23885.png)
+![08](https://user-images.githubusercontent.com/17201709/112739151-3a2cf280-8f72-11eb-9d98-1120d2bdf7ca.png)
 
 Download the exe file and store it anywhere you like.
 
@@ -24,4 +24,4 @@ Last update:
 - Jan. 30, 2021: a new TM1 model (in File Explorer, navigate to the desired folder and hit F10 and choose the new option in the menu)
 - Jan. 31, 2021: automatically open up a PRO file from disk in Notepad++ based on: opened TI process in the TI editor, or selected text in Notepad++, or the selected error log file in File Explorer (enter in the AHK file the TM1 data directory: cPath_TM1_model_Main := "D:\path to my data directory with trailing backslash\" and use that one, optionally compile the AHK file to a new EXE file)
 - Jan. 31, 2021: automatically backup with a timestamp what you are working on: a file in Notepad++, the TI process that you are looking at in TM1 Architect/Perspectives, the RUX file that you are looking at in TM1 Architect/Perspectives, even the Excel file you are looking at.
-- Mar. 26, 2021: extensions to the functionality of "Generate AsciiOutput". You can select the variables in a certain order, which is then retained in the output
+- Mar. 26, 2021: extensions to the functionality of "Generate AsciiOutput". You can select the variables in a certain order, which is then retained in the output. Settings can be saved for later use. And much more.
