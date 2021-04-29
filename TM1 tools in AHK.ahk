@@ -2185,6 +2185,67 @@ StringBetween( String, NeedleStart, NeedleEnd )
     Return String
 }
 
+GetSetting_ByServer( Servername, Setting )
+{
+    If( Servername = "" )
+        Return
+
+    if( Setting <> "tm1datadirectory" )
+    {
+        IniRead, v, settings.ini, %ServerName%, %Setting%,
+        If ( InStr( v, "%", false ) > 0 )
+           v := % ExpandEnvVars(v)
+        If ( Setting = "tm1configdirectory" )
+           If ( SubStr( v, 0) <> "\" )
+              v .= "\"
+        If ( Setting = "tm1backupdirectory" )
+           If ( SubStr( v, 0) <> "\" )
+              v .= "\"
+        If ( Setting = "tm1loggingdirectory" )
+           If ( SubStr( v, 0) <> "\" )
+              v .= "\"
+    }
+    Else
+    {
+        cfg_dir := GetSetting_ByServer( Servername, "tm1configdirectory" )
+
+        If ( InStr( cfg_dir, "%", false ) > 0 )
+           cfg_dir := % ExpandEnvVars(cfg_dir)
+        IniRead, v, %cfg_dir%tm1s.cfg, TM1S, DataBaseDirectory,
+
+        If ( v = "." )
+          {
+		  v := cfg_dir
+		  Return v
+		  }
+
+        If ( v <> . )
+          If ( v <> .. )
+            If ( SubStr( v, 0) <> "\" )
+              v .= "\"
+
+        Parent := SubStr(cfg_dir, 1, InStr(SubStr(cfg_dir, 1, -1), "\", 0, 0) - 1)
+        If ( SubStr( Parent, 0) <> "\" )
+          Parent .= "\"
+
+        if ( InStr( v, "..", false ) > 0 )
+        {
+            v := StrReplace(v, "..", Parent)
+            If ( SubStr( v, 0) <> "\" )
+              v .= "\"
+        }
+
+        if ( InStr( v, ".", false ) > 0 )
+        {
+            v := StrReplace(v, ".", cfg_dir)
+            If ( SubStr( v, 0) <> "\" )
+              v .= "\"
+        }
+    }
+    Return v
+}
+Return
+
 Get_Process_Name( Server, Process )
 {
     if ( Process <> "___Current process" )
